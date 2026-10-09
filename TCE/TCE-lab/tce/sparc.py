@@ -10,8 +10,12 @@ Modèles comparés (accélération radiale g = v^2 / r, en (km/s)^2/kpc)
 --------------------------------------------------------------------
 newton   : g = g_bar
 mond     : g = nu(g_bar/a0) g_bar, interpolation « simple »
+mond_a0  : contrôle, MOND avec a0 libre par galaxie (« rc » = a0 dans la sortie)
 tce      : g = g_bar sqrt((1 + x^2 a0/g_bar) / (1 + x^2)), x = r/rc, rc libre par galaxie
 tce_k    : même forme avec rc = k * Rdisk, k unique pour toutes les galaxies
+tce_v1   : variante de l'éq. (5), g = g_bar sqrt(1 + w a0/g_bar), w = x^2/(1+x^2)
+tce_v2   : variante cohérente RG (G_eff = 1/R_v), g = g_bar + w sqrt(g_bar a0)
+(suffixe _k : rc = k * Rdisk)
 
 Paramètres libres par galaxie : Upsilon_disque (prior log-normale, 0,1 dex autour de
 0,5 ; Upsilon_bulbe = 1,4 Upsilon_disque) et, pour `tce`, rc. Les incertitudes de
@@ -134,6 +138,27 @@ def g_tce(gbar, r, rc, a0=A0_KMS2_KPC, **_):
     return gb * np.sqrt((1.0 + x2 * a0 / gb) / (1.0 + x2))
 
 
+def _w(r, rc):
+    x2 = (r / rc) ** 2
+    return x2 / (1.0 + x2)
+
+
+def g_tce_v1(gbar, r, rc, a0=A0_KMS2_KPC, **_):
+    """Variante V1 (couplage racine carrée) : g = g_bar sqrt(1 + w a0/g_bar)."""
+    gb = np.maximum(gbar, 1e-12)
+    return gb * np.sqrt(1.0 + _w(r, rc) * a0 / gb)
+
+
+def g_tce_v2(gbar, r, rc, a0=A0_KMS2_KPC, **_):
+    """Variante V2 (couplage G_eff = 1/R_v, cohérent RG) : g = g_bar + w sqrt(g_bar a0)."""
+    gb = np.maximum(gbar, 1e-12)
+    return gb + _w(r, rc) * np.sqrt(gb * a0)
+
+
+#: modèles dépendant de rc
+RC_MODELS = {"tce": g_tce, "tce_v1": g_tce_v1, "tce_v2": g_tce_v2}
+
+
 def velocity(g, r):
     return np.sqrt(np.maximum(g, 0.0) * r)
 
@@ -171,16 +196,20 @@ def fit_galaxy(gal: Galaxy, model: str, a0: float = A0_KMS2_KPC, rc_fixed: float
     elif model == "mond":
         gm = g_mond_simple(gbar, r, a0)[:, None, :]
         rcs = np.array([np.nan])
-    elif model in ("tce", "tce_k"):
+    elif model == "mond_a0":
+        # contrôle : MOND avec a0 libre par galaxie (un paramètre libre de plus, comme rc)
+        rcs = A0_KMS2_KPC * np.logspace(-0.7, 0.7, 57)
+        gm = g_mond_simple(gbar[:, None, :], r[None, None, :], rcs[None, :, None])
+    elif model.removesuffix("_k") in RC_MODELS:
         rcs = np.array([rc_fixed]) if rc_fixed is not None else RC_GRID
-        gm = g_tce(gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
+        gm = RC_MODELS[model.removesuffix("_k")](gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
     else:
         raise ValueError(model)
     v = velocity(gm, r)
     chi2_data = (((v - vo) / er) ** 2).sum(axis=-1)          # (nU, nR)
     chi2 = chi2_data + prior[:, None]
     iu, ir = np.unravel_index(np.argmin(chi2), chi2.shape)
-    k = 1 + (model == "tce")
+    k = 1 + (model in RC_MODELS or model == "mond_a0")
     return {
         "name": gal.name, "model": model, "chi2": float(chi2[iu, ir]),
         "chi2_data": float(chi2_data[iu, ir]), "n": int(len(r)), "dof": int(len(r) - k),
@@ -194,20 +223,20 @@ def fit_all(galaxies, model, a0=A0_KMS2_KPC, k_rdisk: float | None = None, quali
     for gal in galaxies:
         if gal.quality and gal.quality > quality_max:
             continue
-        if model == "tce_k":
+        if model.endswith("_k"):
             if not np.isfinite(gal.rdisk) or gal.rdisk <= 0:
                 continue
-            out.append(fit_galaxy(gal, "tce_k", a0, rc_fixed=k_rdisk * gal.rdisk))
+            out.append(fit_galaxy(gal, model, a0, rc_fixed=k_rdisk * gal.rdisk))
         else:
             out.append(fit_galaxy(gal, model, a0))
     return out
 
 
-def fit_k_global(galaxies, a0=A0_KMS2_KPC, ks=np.logspace(-0.5, 1.5, 21), quality_max=2):
+def fit_k_global(galaxies, a0=A0_KMS2_KPC, ks=np.logspace(-0.5, 1.5, 21), quality_max=2, model="tce_k"):
     """Cherche le k unique (rc = k Rdisk) qui minimise le chi2 total."""
     totals = []
     for k in ks:
-        res = fit_all(galaxies, "tce_k", a0, k_rdisk=k, quality_max=quality_max)
+        res = fit_all(galaxies, model, a0, k_rdisk=k, quality_max=quality_max)
         totals.append(sum(r["chi2"] for r in res))
     i = int(np.argmin(totals))
     return float(ks[i]), np.array(totals)

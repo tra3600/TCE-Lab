@@ -33,6 +33,23 @@ class TestSparcFit(unittest.TestCase):
         for other in ("newton", "mond"):
             self.assertLess(tce["chi2"], sparc.fit_galaxy(gal, other)["chi2"])
 
+    def test_variants_never_below_baryons_and_have_right_limits(self):
+        gb = np.logspace(-2, 8, 60)             # (km/s)^2/kpc, de << a0 à >> a0
+        for fn in (sparc.g_tce_v1, sparc.g_tce_v2):
+            for r, rc in ((1.0, 1e-3), (1.0, 1.0), (1.0, 1e3), (100.0, 1.0)):
+                self.assertTrue(np.all(fn(gb, r, rc) >= gb * (1 - 1e-12)))
+            np.testing.assert_allclose(fn(gb, 1.0, 1e6), gb, rtol=1e-6)               # r << rc : Newton
+            np.testing.assert_allclose(fn(np.array([1e9]), 1e3, 1.0), 1e9, rtol=5e-3)  # g >> a0 : Newton
+            deep = fn(np.array([1e-2]), 1e3, 1.0)                                    # r >> rc, g << a0
+            np.testing.assert_allclose(deep, np.sqrt(1e-2 * sparc.A0_KMS2_KPC), rtol=2e-2)
+
+    def test_fit_recovers_rc_for_variant_v2(self):
+        gal = synthetic_galaxy(rc_true=4.0)
+        gbar = sparc.g_baryon(gal, 0.5)[0]
+        gal.vobs = sparc.velocity(sparc.g_tce_v2(gbar, gal.r, 4.0), gal.r)
+        fit = sparc.fit_galaxy(gal, "tce_v2")
+        self.assertAlmostEqual(np.log10(fit["rc"]), np.log10(4.0), delta=0.06)
+
     def test_summary_keys(self):
         res = [sparc.fit_galaxy(synthetic_galaxy(), m) for m in ("mond", "tce")]
         s = sparc.summarize(res[:1])

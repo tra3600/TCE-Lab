@@ -47,20 +47,42 @@ Les mentions « connaissance générale » ne sont pas vérifiées dans cette se
 - Remplacer le profil (5) par la forme dérivée d'une entropie en loi de volume et comparer.
 - Ajouter un test statistique sur les binaires larges (modèle de boost g_eff/g_N).
 
-## 5. Premier ajustement sur SPARC (`examples/fit_sparc.py`)
+## 5. Ajustements sur SPARC (`examples/fit_sparc.py`)
 
 163 galaxies de qualité 1-2 (sur 175), Upsilon_disque avec prior log-normale (0,5 ± 0,1 dex),
-distances et inclinaisons non modélisées. Résultats du 9 octobre 2026 :
+distances et inclinaisons non modélisées. Résultats du 9 octobre 2026.
 
-| Modèle | χ²/dof médian | χ²/dof total | BIC | rms (dex) |
+### 5.1 Variantes de l'éq. (5)
+
+La forme lue dans le manuscrit donne g < g_baryonique pour 23,7 % des points (r ≫ rc et g_bar ≫ a₀).
+Deux variantes qui évitent ce défaut, avec w = x²/(1+x²) et x = r/rc :
+
+| Variante | Rigidité | Couplage | g_eff | Propriétés |
 |---|---|---|---|---|
-| Newton (baryons) | 40,6 | 256,6 | 798 410 | 0,361 |
-| MOND (a₀ fixé) | 3,8 | 14,2 | 45 502 | 0,282 |
-| TCE (rc libre par galaxie) | 3,5 | 20,4 | 62 514 | 0,126 |
-| TCE (rc = k·Rdisk, k = 1,26) | 4,9 | 30,5 | 96 072 | 0,165 |
+| Manuscrit (lecture B) | R₀(1+x²)/(1+x² a₀/g) | racine carrée | g √((1+x² a₀/g)/(1+x²)) | g_eff < g pour r ≫ rc, g ≫ a₀ ; R_v peut dépasser R₀ |
+| **V1** | R₀ / (1 + w a₀/g) | racine carrée | g √(1 + w a₀/g) | g_eff ≥ g ; R_v ≤ R₀ ; Newton si r ≪ rc ou g ≫ a₀ ; √(g a₀) si r ≫ rc, g ≪ a₀ |
+| **V2** | R₀ / (1 + w √(a₀/g)) | G_eff = 1/R_v (cohérent RG) | g + w √(g a₀) | mêmes limites ; **le plateau vient de R_v sans racine carrée ajoutée à la main** |
 
-Lecture prudente :
-- TCE avec rc libre a le plus petit écart médian et le plus petit rms, mais il a un paramètre de plus par galaxie ; son χ² total et son BIC sont moins bons que ceux de MOND.
-- Pour 23,7 % des points, TCE donne g < g_baryonique (jamais pour MOND) : c'est la limite connue de la forme (5) pour r ≫ rc et g_bar ≫ a₀ (gravité affaiblie). Elle rend le modèle non physique dans ces zones.
-- rc libre est corrélé avec Rdisk (corrélation log-log 0,44), mais 48 galaxies sur 163 butent sur le bord de la grille de rc ; rc = k·Rdisk, avec un seul k, est nettement moins bon.
+### 5.2 Résultats
+
+| Modèle | Paramètres libres par galaxie | χ²/dof médian | χ²/dof total | BIC | rms (dex) |
+|---|---|---|---|---|---|
+| Newton | Υ | 40,6 | 256,6 | 798 410 | 0,361 |
+| MOND (a₀ fixé) | Υ | 3,8 | 14,2 | 45 502 | 0,282 |
+| **MOND, a₀ libre (contrôle)** | Υ, a₀ | **2,0** | **5,3** | **18 297** | **0,114** |
+| TCE manuscrit (rc libre) | Υ, rc | 3,5 | 20,4 | 62 514 | 0,126 |
+| TCE V1 (rc libre) | Υ, rc | 2,8 | 12,4 | 39 045 | 0,117 |
+| TCE V2 (rc libre) | Υ, rc | 2,3 | 7,8 | 25 556 | 0,117 |
+| TCE manuscrit, rc = k Rdisk | Υ (+ k global = 1,26) | 4,9 | 30,5 | 96 072 | 0,165 |
+| TCE V1, rc = k Rdisk | Υ (+ k global = 0,40) | 4,0 | 15,4 | 49 128 | 0,177 |
+| TCE V2, rc = k Rdisk | Υ (+ k global = 0,40) | 4,5 | 15,4 | 49 135 | 0,188 |
+
+### 5.3 Lecture prudente
+
+- **Le défaut est corrigé.** V1 et V2 ne donnent jamais g < g_baryonique (contre 23,7 %).
+- **V2 est la meilleure des formes TCE** : χ²/dof total 7,8 contre 14,2 pour MOND à a₀ fixé, et un BIC plus bas malgré un paramètre libre de plus par galaxie.
+- **Mais le contrôle est décisif** : MOND avec a₀ libre par galaxie fait mieux que toutes les variantes TCE (χ²/dof total 5,3 ; BIC 18 297). L'avantage de TCE sur MOND vient donc de la liberté d'un paramètre par galaxie, pas de la forme de la loi. À flexibilité égale, ces données ne favorisent pas TCE.
+- **rc = k·Rdisk avec un seul k** reste moins bon que MOND à a₀ fixé pour le manuscrit, et à peine meilleur pour V1 et V2 (χ²/dof total 15,4 contre 14,2) : rc n'est pas fixé par une échelle simple.
+- Les variantes V1 et V2 sont des formes écrites après avoir vu le défaut : elles n'ont pas de dérivation, seulement des limites correctes.
+- **Le problème des horloges (section 1) persiste.** Dans V1 et V2, R₀/R_v = 1 + w·a₀/g (ou 1 + w√(a₀/g)) atteint ~100 à faible accélération : si dt gouverne les horloges atomiques, l'écart reste d'ordre 1 là où la RG donne 10⁻⁶ à 10⁻⁸.
 - Les χ² absolus ne sont pas interprétables sans les incertitudes de distance et d'inclinaison ; seules les comparaisons relatives le sont.

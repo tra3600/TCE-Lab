@@ -114,6 +114,29 @@ def stiffness_profile(r, rc, g_N, a0: float = A0_MOND, R0: float | None = None):
     return R0 * (1.0 + x2) / (1.0 + x2 * a0 / np.asarray(g_N, dtype=float))
 
 
+def _w(r, rc):
+    x2 = (np.asarray(r, dtype=float) / rc) ** 2
+    return x2 / (1.0 + x2)
+
+
+def stiffness_profile_v1(r, rc, g_N, a0: float = A0_MOND, R0: float | None = None):
+    """Variante V1 de l'éq. (5) : R_v = R_0 / (1 + w a0/g_N), w = x^2/(1+x^2).
+    Avec g_eff = g_N sqrt(R_0/R_v) (couplage en racine carrée du manuscrit) :
+    g_eff = g_N sqrt(1 + w a0/g_N) >= g_N, Newton si r << rc ou g_N >> a0,
+    sqrt(g_N a0) si r >> rc et g_N << a0. R_v <= R_0 partout (le vide ne fait que s'affaisser)."""
+    R0 = vacuum_stiffness_R0() if R0 is None else R0
+    return R0 / (1.0 + _w(r, rc) * a0 / np.asarray(g_N, dtype=float))
+
+
+def stiffness_profile_v2(r, rc, g_N, a0: float = A0_MOND, R0: float | None = None):
+    """Variante V2 : R_v = R_0 / (1 + w sqrt(a0/g_N)).
+    Avec le couplage cohérent avec la RG, G_eff = 1/R_v, c.-à-d. g_eff = g_N R_0/R_v :
+    g_eff = g_N + w sqrt(g_N a0) >= g_N, mêmes limites que V1, sans la racine
+    carrée ajoutée à la main : le plateau vient directement de R_v ~ R_0 sqrt(g_N/a0)."""
+    R0 = vacuum_stiffness_R0() if R0 is None else R0
+    return R0 / (1.0 + _w(r, rc) * np.sqrt(a0 / np.asarray(g_N, dtype=float)))
+
+
 def g_eff_deep_mond(g_N, a0: float = A0_MOND):
     """Éq. (6), régime g_N << a0 : g_eff = sqrt(g_N a0)."""
     return np.sqrt(np.asarray(g_N, dtype=float) * a0)

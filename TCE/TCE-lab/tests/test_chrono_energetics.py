@@ -64,6 +64,27 @@ class TestRotation(unittest.TestCase):
         self.assertLess(np.ptp(v) / v.mean(), 0.01)
 
 
+class TestVariants(unittest.TestCase):
+    M = 1e41
+
+    def test_variant_stiffness_never_exceeds_R0(self):
+        r = np.logspace(17, 23, 40)
+        gN = ce.g_newton(self.M, r)
+        R0 = ce.vacuum_stiffness_R0()
+        for fn in (ce.stiffness_profile_v1, ce.stiffness_profile_v2):
+            self.assertTrue(np.all(fn(r, 3e19, gN) <= R0 * (1 + 1e-12)))
+
+    def test_v1_with_sqrt_coupling_and_v2_with_linear_coupling_give_flat_curves(self):
+        r = np.array([1e22, 1e23])
+        gN = ce.g_newton(self.M, r)
+        R0 = ce.vacuum_stiffness_R0()
+        g1 = ce.g_eff_from_stiffness(gN, ce.stiffness_profile_v1(r, 3e19, gN))
+        g2 = gN * R0 / ce.stiffness_profile_v2(r, 3e19, gN)
+        for g in (g1, g2):
+            v = ce.circular_velocity(r, g)
+            self.assertAlmostEqual(v[1] / v[0], 1.0, delta=0.02)
+
+
 class TestHysteresis(unittest.TestCase):
     def test_relaxation_matches_ode(self):
         tau, Rs, R = 2.0, 1.0, 5.0
