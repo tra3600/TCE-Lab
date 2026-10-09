@@ -8,3 +8,5 @@ venv/
 .venv/
 
 structure.txt
+data/
+results/

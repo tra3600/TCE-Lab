@@ -46,3 +46,21 @@ Les mentions « connaissance générale » ne sont pas vérifiées dans cette se
 - Ajuster `rc` sur des courbes SPARC (téléchargement hors de cette session).
 - Remplacer le profil (5) par la forme dérivée d'une entropie en loi de volume et comparer.
 - Ajouter un test statistique sur les binaires larges (modèle de boost g_eff/g_N).
+
+## 5. Premier ajustement sur SPARC (`examples/fit_sparc.py`)
+
+163 galaxies de qualité 1-2 (sur 175), Upsilon_disque avec prior log-normale (0,5 ± 0,1 dex),
+distances et inclinaisons non modélisées. Résultats du 9 octobre 2026 :
+
+| Modèle | χ²/dof médian | χ²/dof total | BIC | rms (dex) |
+|---|---|---|---|---|
+| Newton (baryons) | 40,6 | 256,6 | 798 410 | 0,361 |
+| MOND (a₀ fixé) | 3,8 | 14,2 | 45 502 | 0,282 |
+| TCE (rc libre par galaxie) | 3,5 | 20,4 | 62 514 | 0,126 |
+| TCE (rc = k·Rdisk, k = 1,26) | 4,9 | 30,5 | 96 072 | 0,165 |
+
+Lecture prudente :
+- TCE avec rc libre a le plus petit écart médian et le plus petit rms, mais il a un paramètre de plus par galaxie ; son χ² total et son BIC sont moins bons que ceux de MOND.
+- Pour 23,7 % des points, TCE donne g < g_baryonique (jamais pour MOND) : c'est la limite connue de la forme (5) pour r ≫ rc et g_bar ≫ a₀ (gravité affaiblie). Elle rend le modèle non physique dans ces zones.
+- rc libre est corrélé avec Rdisk (corrélation log-log 0,44), mais 48 galaxies sur 163 butent sur le bord de la grille de rc ; rc = k·Rdisk, avec un seul k, est nettement moins bon.
+- Les χ² absolus ne sont pas interprétables sans les incertitudes de distance et d'inclinaison ; seules les comparaisons relatives le sont.
