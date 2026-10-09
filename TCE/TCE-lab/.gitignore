@@ -1,7 +1,7 @@
 __pycache__/
 *.pyc
 
-.ipnynb_checkpoints/
+.ipynb_checkpoints/
 
 .env
 venv/
