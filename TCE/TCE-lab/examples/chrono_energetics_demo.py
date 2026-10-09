@@ -9,6 +9,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tce import chrono_energetics as ce  # noqa: E402
+from tce import confrontation as cf  # noqa: E402
 
 KPC = 3.0857e19  # m
 MSUN = 1.989e30  # kg
@@ -52,6 +53,37 @@ for adv in (False, True):
 print("-> L'éq.(8) seule donne un décalage NÉGATIF (la lentille retarde sur le gaz).")
 print("   Le décalage positif de l'amas de la Balle exige un terme de transport (extension).")
 
+titre("Étape 6 - Confrontation relativiste : horloges (éq. 1) contre RG champ faible")
+r6 = np.array([1, 3, 10, 30, 100]) * KPC
+ck = cf.clock_test_galaxy(r6, M, rc=3 * KPC)
+print(f"{'r (kpc)':>8} {'R_v/R_0':>10} {'taux TCE':>10} {'écart TCE':>11} {'écart RG':>11}")
+for i, ri in enumerate(r6):
+    print(f"{ri/KPC:8.1f} {ck['R_v_over_R0'][i]:10.3e} {ck['tce_rate'][i]:10.3f} "
+          f"{ck['tce_deviation'][i]:+11.2e} {ck['gr_deviation'][i]:+11.2e}")
+print("-> si dt gouverne les horloges, l'éq.(1)+(5) prédit des écarts d'ordre 1 là où la RG")
+print("   donne ~1e-6 : incompatible avec les raies atomiques observées. Sortie possible :")
+print("   dt n'est pas le temps propre atomique, ou (5) ne vaut que pour le couplage gravitationnel.")
+rs = cf.schwarzschild_radius(MSUN)
+print(f"Trou noir stellaire : R_v(r) = R_0/sqrt(1-r_s/r) redonne la RG par construction ; "
+      f"à r=3 r_s : taux = {float(cf.gr_clock_rate_schwarzschild(3*rs, MSUN)):.4f}")
+
+titre("Étape 7 - Couplage : racine carrée du manuscrit contre G_eff = 1/R_v (cohérent RG)")
+r7 = np.array([3, 10, 30, 100, 300]) * KPC
+cmp7 = cf.compare_rotation_curves(r7, M, rc=3 * KPC)
+print(f"{'r (kpc)':>8} {'Newton':>8} {'TCE sqrt':>9} {'TCE 1/Rv':>9} {'MOND':>8} {'RG+NFW':>8}  (km/s)")
+for i, ri in enumerate(r7):
+    print(f"{ri/KPC:8.0f} " + " ".join(f"{cmp7[k][i]/1e3:9.1f}" for k in
+          ("newton", "tce_sqrt", "tce_varying_G", "mond", "gr_nfw")))
+print("-> 1/R_v (RG) donne une courbe qui MONTE ; la racine carrée du manuscrit est un ajout.")
+
+titre("Étape 8 - Échelle a0 et cosmologie")
+for k, v in cf.a0_cosmic_candidates().items():
+    print(f"{k:24s} = {v:.3e} m/s^2")
+
+titre("Étape 9 - Pont avec Jacobson : R_0 depuis l'entropie de l'horizon")
+print(f"eta = 1/(4 l_P^2) = {cf.bekenstein_hawking_eta():.3e} 1/m^2")
+print(f"hbar c^2 eta/(2 pi) = {cf.jacobson_R0():.4e} W ; c*R_0 = {ce.c*ce.vacuum_stiffness_R0():.4e} W")
+
 if "--plots" in sys.argv:
     import matplotlib
     matplotlib.use("Agg")
@@ -74,3 +106,22 @@ if "--plots" in sys.argv:
     fig.tight_layout()
     fig.savefig(os.path.join(os.path.dirname(__file__), "figures", "chrono_energetics.png"), dpi=130)
     print("\nFigure : examples/figures/chrono_energetics.png")
+
+    fig2, bx = plt.subplots(1, 3, figsize=(15, 4))
+    rr2 = np.logspace(-0.5, 2.7, 200) * KPC
+    cv = cf.compare_rotation_curves(rr2, M, rc=3 * KPC)
+    labels = {"newton": "newtonien", "tce_sqrt": "TCE (racine, manuscrit)", "tce_varying_G": "TCE (G_eff=1/R_v)",
+              "mond": "MOND", "gr_nfw": "RG + NFW"}
+    for k, lab in labels.items():
+        bx[0].semilogx(rr2 / KPC, cv[k] / 1e3, label=lab)
+    bx[0].set(xlabel="r (kpc)", ylabel="v (km/s)", title="Courbes de rotation", ylim=(0, 700)); bx[0].legend(fontsize=8)
+    ck2 = cf.clock_test_galaxy(rr2, M, rc=3 * KPC)
+    bx[1].loglog(rr2 / KPC, np.abs(ck2["tce_deviation"]), label="TCE : |taux - 1|")
+    bx[1].loglog(rr2 / KPC, np.abs(ck2["gr_deviation"]), label="RG : |Phi/c^2|")
+    bx[1].set(xlabel="r (kpc)", title="Taux d'horloge : écart à 1"); bx[1].legend()
+    cand = cf.a0_cosmic_candidates()
+    bx[2].barh(list(cand.keys()), list(cand.values()))
+    bx[2].set(xscale="log", title="a0 : coïncidence avec c H0", xlabel="m/s^2")
+    fig2.tight_layout()
+    fig2.savefig(os.path.join(os.path.dirname(__file__), "figures", "confrontation.png"), dpi=130)
+    print("Figure : examples/figures/confrontation.png")
