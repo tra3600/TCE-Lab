@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+.ipnynb_checkpoints/
+
+.env
+venv/
+.venv/
+
+structure.txt
