@@ -49,8 +49,9 @@ class LTGalaxy:
 
 def normalize_name(name: str) -> str:
     """Normalise un nom de galaxie pour comparer SPARC et LITTLE THINGS
-    (« DDO_154 » = « DDO154 », « UGC08508 » = « UGC8508 »)."""
+    (« DDO_154 » = « DDO154 », « UGC08508 » = « UGC8508 », « U5750 » = « UGC5750 »)."""
     s = re.sub(r"[^A-Z0-9]", "", name.upper())
+    s = re.sub(r"^U(\d)", r"UGC\1", s)          # « U5750 » = « UGC 5750 »
     return re.sub(r"^([A-Z]+)0+(\d)", r"\1\2", s)
 
 

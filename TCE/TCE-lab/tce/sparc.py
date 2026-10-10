@@ -26,6 +26,7 @@ distance et d'inclinaison sont modélisées avec `marginalize=True` (priors gaus
 """
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import re
@@ -230,6 +231,22 @@ def velocity(g, r):
 # --------------------------------------------------------------------------
 UPSILON_GRID = np.logspace(np.log10(0.2), np.log10(1.2), 41)
 RC_GRID = np.logspace(-1.0, 2.5, 141)  # 0,1 à ~300 kpc
+
+
+@contextlib.contextmanager
+def upsilon_prior(center: float, sigma_dex: float, lo: float | None = None, hi: float | None = None):
+    """Change temporairement la prior log-normale sur le rapport masse/luminosité du disque
+    (par défaut : 0,5 à 3,6 micron). La grille couvre [lo, hi] (défaut : center/2.5 à center*2.4)."""
+    global UPSILON_DISK_PRIOR, UPSILON_SIGMA_DEX, UPSILON_GRID
+    saved = (UPSILON_DISK_PRIOR, UPSILON_SIGMA_DEX, UPSILON_GRID)
+    lo = center / 2.5 if lo is None else lo
+    hi = center * 2.4 if hi is None else hi
+    UPSILON_DISK_PRIOR, UPSILON_SIGMA_DEX = center, sigma_dex
+    UPSILON_GRID = np.logspace(np.log10(lo), np.log10(hi), 41)
+    try:
+        yield
+    finally:
+        UPSILON_DISK_PRIOR, UPSILON_SIGMA_DEX, UPSILON_GRID = saved
 
 
 def _prior_chi2(u):

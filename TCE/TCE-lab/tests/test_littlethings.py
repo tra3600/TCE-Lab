@@ -30,7 +30,7 @@ class TestLittleThings(unittest.TestCase):
         self.assertEqual(g.m_star, 2e6)
 
     def test_name_normalisation(self):
-        for a, b in (("DDO_154", "DDO154"), ("UGC08508", "UGC8508"), ("NGC 2366", "NGC2366")):
+        for a, b in (("DDO_154", "DDO154"), ("UGC08508", "UGC8508"), ("NGC 2366", "NGC2366"), ("U5750", "UGC05750")):
             self.assertEqual(lt.normalize_name(a), lt.normalize_name(b))
         self.assertNotEqual(lt.normalize_name("DDO154"), lt.normalize_name("DDO1540"))
 
@@ -46,6 +46,37 @@ class TestLittleThings(unittest.TestCase):
         s, _, scat = lt.fit_btfr_slope(v, m)
         self.assertAlmostEqual(s, 4.0, places=8)
         self.assertLess(scat, 1e-8)
+
+
+LSB = """# comment
+Name\tR\tRkpc\tVgas\tVdisk\tVbul\tV\tErr
+\t"\tkpc\tkm/s\tkm/s\tkm/s\tkm/s\tkm/s
+F563-1 \t\t\t\t\t\t\t
+\t6.6\t1.4\t3.3\t17.2\t0\t45.1\t24.7
+\t13.0\t2.8\t8.0\t20.6\t0\t81.6\t17.5
+#
+NOMODEL\t\t\t\t\t\t\t
+\t5.0\t1.0\t0\t0\t0\t30.0\t5.0
+"""
+
+
+class TestLsbLoader(unittest.TestCase):
+    def test_parse_keeps_only_galaxies_with_mass_models(self):
+        from tce import lsb2001
+        with tempfile.TemporaryDirectory() as d:
+            open(os.path.join(d, lsb2001.FILE), "w").write(LSB)
+            gals = lsb2001.load(d)
+        self.assertEqual([g.name for g in gals], ["F563-1"])
+        np.testing.assert_allclose(gals[0].r, [1.4, 2.8])
+        np.testing.assert_allclose(gals[0].vdisk, [17.2, 20.6])
+
+    def test_upsilon_prior_context_restores_defaults(self):
+        before = (sparc.UPSILON_DISK_PRIOR, sparc.UPSILON_SIGMA_DEX, sparc.UPSILON_GRID.copy())
+        with sparc.upsilon_prior(1.0, 0.2):
+            self.assertEqual(sparc.UPSILON_DISK_PRIOR, 1.0)
+            self.assertAlmostEqual(sparc.UPSILON_GRID[0], 0.4)
+        self.assertEqual(sparc.UPSILON_DISK_PRIOR, before[0])
+        np.testing.assert_allclose(sparc.UPSILON_GRID, before[2])
 
 
 class TestExternalLoader(unittest.TestCase):

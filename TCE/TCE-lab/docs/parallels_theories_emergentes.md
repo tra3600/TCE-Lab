@@ -210,3 +210,27 @@ python examples/fit_external.py --dir data/things_rotmod
 ```
 
 Le script exclut les galaxies déjà dans SPARC et compare Newton, MOND (a₀ fixé, a₀ libre, rayon de transition libre, indice libre) et TCE V1/V2 à un paramètre libre par galaxie. Seul un résultat où V2 bat `mond_rs` sur ces données indépendantes, avec le même nombre de paramètres, validerait l'avantage mesuré sur SPARC (section 7).
+
+### 8.4 Recherche des courbes THINGS de de Blok et al. (2008) « ailleurs »
+
+| Source essayée | Résultat |
+|---|---|
+| CDS / VizieR (J/AJ/136/2648) | Catalogue introuvable |
+| Site de l'enquête THINGS (MPIA) | Seulement des cubes et cartes FITS bruts ; aucun fichier de courbes de rotation |
+| Source TeX de l'article ([arXiv:0810.2100](https://arxiv.org/abs/0810.2100)) | Tables globales uniquement (positions, distances, inclinaisons, masses stellaires, paramètres de halo). Les courbes radiales (Vobs, Vgas, Vstar) n'existent que sous forme de **figures PostScript** |
+| Compilation de [Ghari et al. 2019 (arXiv:1911.09116)](https://arxiv.org/abs/1911.09116) | Pas de fichier de données dans la source ; elle reprend SPARC, THINGS, LITTLE THINGS |
+| Pages de données de McGaugh | Contiennent SPARC et l'échantillon LSB de de Blok+2001 (voir ci-dessous) |
+
+**THINGS n'est de toute façon pas un échantillon indépendant de SPARC** : 13 des 19 galaxies de de Blok et al. (2008) sont dans SPARC
+(NGC 2366, 2403, 2841, 2903, 2976, 3198, 3521, 5055, 6946, 7331, 7793, IC 2574, DDO 154). Les six autres (NGC 925, 3031, 3621, 3627, 4736, 4826) sont
+absentes de SPARC, mais leurs courbes ne sont disponibles qu'en figure.
+
+**Échantillon LSB de de Blok, McGaugh & Rubin (2001)** : `tce/lsb2001.py` charge `RCsmooth.0701.dat` (courbes hybrides Hα–HI avec Vgas, Vdisk, Vbul).
+Sept galaxies ont un modèle de masse (F563-1, F568-3, F571-8, F579-V1, F583-4, UGC 5750, UGC 6614) et **les sept sont dans SPARC** : aucun test indépendant.
+
+**Sources restantes pour un test radial indépendant** (non vérifiées ici) :
+- Swaters et al. 2009 (WHISP, 62 naines, [arXiv:0901.4222](https://arxiv.org/abs/0901.4222)) : partiellement dans SPARC ; reste à vérifier la disponibilité des tables et des profils baryoniques.
+- LITTLE THINGS (Oh+2015) : les profils baryoniques radiaux ne sont pas dans les tables du CDS.
+- BIG-SPARC (~4000 galaxies, [arXiv:2411.13329](https://arxiv.org/abs/2411.13329)) : en cours de construction d'après la source ; à vérifier.
+
+Pour une validation hors échantillon, les formes V1/V2 sont donc pour l'instant testables seulement sur des échantillons à venir.
