@@ -1,0 +1,28 @@
+175 galaxies chargées ; qualité <= 2 ; distance et inclinaison marginalisées : True
+
+modèle    N gal  chi2/dof méd.  chi2/dof tot.        BIC  rms (dex)
+newton      163          27.67         196.00     548840      0.279
+mond        163           2.87           6.88      23084      0.272
+/home/user/tce-lab/TCE/TCE-lab/examples/../tce/sparc.py:407: RuntimeWarning: divide by zero encountered in divide
+  "chi2_red_median": float(np.median(chi2 / dof)), "chi2_red_total": float(chi2.sum() / dof.sum()),
+mond_a0     163           2.59           5.54      19780      0.111
+tce         163           3.00          11.42      35155      0.106
+tce_v1      163           2.39           6.82      23127      0.099
+tce_v2      163           2.03           4.48      17005      0.099
+tce_k       163           3.97          17.34      52161      0.135
+tce_v1_k    163           2.81           7.60      25083      0.115
+tce_v2_k    163           2.75           6.78      22813      0.166
+mond: fraction de points avec g_modèle < g_baryonique : 0.0%
+tce: fraction de points avec g_modèle < g_baryonique : 22.7%
+tce_v1: fraction de points avec g_modèle < g_baryonique : 0.0%
+tce_v2: fraction de points avec g_modèle < g_baryonique : 0.0%
+
+k global (rc = k * Rdisk) : tce=1.00, tce_v1=0.40, tce_v2=0.32
+rc libre vs Rdisk : corrélation log-log = 0.47 sur 123 galaxies (hors bords de grille)
+galaxies avec rc au bord de la grille : 40 / 163
+CSV écrit dans results/
+Traceback (most recent call last):
+  File "/home/user/tce-lab/TCE/TCE-lab/examples/fit_sparc.py", line 86, in <module>
+    ax[1].hist([x["chi2"] / x["dof"] for x in res[m]], bins=np.logspace(-1, 2, 30), alpha=0.5, color=c_, label=m)
+                ~~~~~~~~~~^~~~~~~~~~
+ZeroDivisionError: float division by zero

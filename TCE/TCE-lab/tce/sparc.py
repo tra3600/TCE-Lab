@@ -19,7 +19,8 @@ tce_v2   : variante cohérente RG (G_eff = 1/R_v), g = g_bar + w sqrt(g_bar a0)
 
 Paramètres libres par galaxie : Upsilon_disque (prior log-normale, 0,1 dex autour de
 0,5 ; Upsilon_bulbe = 1,4 Upsilon_disque) et, pour `tce`, rc. Les incertitudes de
-distance et d'inclinaison ne sont pas modélisées (limite connue).
+distance et d'inclinaison sont modélisées avec `marginalize=True` (priors gaussiens
+ sur D et i, grille 7 x 7 sur +-2 sigma).
 """
 from __future__ import annotations
 
@@ -55,6 +56,13 @@ class Galaxy:
     rdisk: float = np.nan   # kpc
     quality: int = 0
     vflat: float = np.nan
+    e_dist: float = np.nan   # Mpc
+    inc: float = np.nan      # degrés
+    e_inc: float = np.nan    # degrés
+    lum: float = np.nan      # L[3.6], 1e9 L_sun
+    mhi: float = np.nan      # masse HI, 1e9 M_sun
+    reff: float = np.nan     # kpc
+    sbdisk: float = np.nan   # brillance centrale du disque, L_sun/pc^2
 
 
 # --------------------------------------------------------------------------
@@ -82,7 +90,11 @@ def _parse_table1(path: str) -> dict:
                 except ValueError:
                     continue
                 rows[parts[0]] = {
-                    "D": float(parts[2]), "rdisk": float(parts[11]),
+                    "D": float(parts[2]), "e_D": float(parts[3]),
+                    "inc": float(parts[5]), "e_inc": float(parts[6]),
+                    "L": float(parts[7]), "reff": float(parts[9]),
+                    "rdisk": float(parts[11]), "sbdisk": float(parts[12]),
+                    "mhi": float(parts[13]),
                     "vflat": float(parts[15]), "Q": int(parts[17]),
                 }
     return rows
@@ -107,6 +119,10 @@ def load_sparc(directory: str) -> list[Galaxy]:
                 vgas=data[:, 3], vdisk=data[:, 4], vbul=data[:, 5],
                 distance=meta.get("D", np.nan), rdisk=meta.get("rdisk", np.nan),
                 quality=meta.get("Q", 0), vflat=meta.get("vflat", np.nan),
+                e_dist=meta.get("e_D", np.nan), inc=meta.get("inc", np.nan),
+                e_inc=meta.get("e_inc", np.nan), lum=meta.get("L", np.nan),
+                mhi=meta.get("mhi", np.nan), reff=meta.get("reff", np.nan),
+                sbdisk=meta.get("sbdisk", np.nan),
             ))
     return galaxies
 
@@ -183,63 +199,205 @@ def _good(gal: Galaxy):
     return ok & (gb > 0)
 
 
-def fit_galaxy(gal: Galaxy, model: str, a0: float = A0_KMS2_KPC, rc_fixed: float | None = None):
-    """Meilleur ajustement sur la grille ; renvoie un dict (chi2, dof, Upsilon, rc...)."""
+#: nombre de sigmas explorés pour la distance et l'inclinaison (grille de 7 points sur +-2 sigma)
+NUISANCE_Z = np.linspace(-2.0, 2.0, 7)
+
+
+def _base_model(model: str) -> str:
+    return model.removesuffix("_k").removesuffix("_law")
+
+
+def _nuisance_grid(gal: Galaxy):
+    """Liste (facteur de distance, rapport sin i0/sin i, chi2 de prior) ; un seul
+    point neutre si distance ou inclinaison sont inconnues."""
+    ok = np.isfinite([gal.distance, gal.e_dist, gal.inc, gal.e_inc]).all() and gal.distance > 0
+    if not ok:
+        return [(1.0, 1.0, 0.0)]
+    e_inc = max(gal.e_inc, 1.0)
+    out = []
+    for zd in NUISANCE_Z:
+        fD = 1.0 + zd * gal.e_dist / gal.distance
+        if fD < 0.3:
+            continue
+        for zi in NUISANCE_Z:
+            inc = np.clip(gal.inc + zi * e_inc, 5.0, 89.0)
+            ratio = np.sin(np.radians(gal.inc)) / np.sin(np.radians(inc))
+            out.append((fD, ratio, zd**2 + zi**2))
+    return out
+
+
+def fit_galaxy(gal: Galaxy, model: str, a0: float = A0_KMS2_KPC, rc_fixed: float | None = None,
+               marginalize: bool = False):
+    """Meilleur ajustement sur la grille ; renvoie un dict (chi2, dof, Upsilon, rc...).
+
+    marginalize=True ajoute deux paramètres de nuisance avec prior gaussienne :
+      * la distance D' = D (1 + z e_D/D) : rayons r -> r D'/D et vitesses baryoniques
+        V_bar -> V_bar sqrt(D'/D) (M ~ D^2, V^2 ~ M/r) ;
+      * l'inclinaison i' = i + z e_i : V_obs et erreurs -> x sin(i)/sin(i').
+    Le chi2 renvoyé inclut les priors (maximum a posteriori)."""
     m = _good(gal)
-    r, vo, er = gal.r[m], gal.vobs[m], gal.err[m]
-    g = Galaxy(gal.name, r, vo, er, gal.vgas[m], gal.vdisk[m], gal.vbul[m])
-    gbar = g_baryon(g, UPSILON_GRID)  # (nU, n)
-    prior = _prior_chi2(UPSILON_GRID)
-    if model == "newton":
-        gm = gbar[:, None, :]
-        rcs = np.array([np.nan])
-    elif model == "mond":
-        gm = g_mond_simple(gbar, r, a0)[:, None, :]
-        rcs = np.array([np.nan])
-    elif model == "mond_a0":
-        # contrôle : MOND avec a0 libre par galaxie (un paramètre libre de plus, comme rc)
-        rcs = A0_KMS2_KPC * np.logspace(-0.7, 0.7, 57)
-        gm = g_mond_simple(gbar[:, None, :], r[None, None, :], rcs[None, :, None])
-    elif model.removesuffix("_k") in RC_MODELS:
-        rcs = np.array([rc_fixed]) if rc_fixed is not None else RC_GRID
-        gm = RC_MODELS[model.removesuffix("_k")](gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
-    else:
-        raise ValueError(model)
-    v = velocity(gm, r)
-    chi2_data = (((v - vo) / er) ** 2).sum(axis=-1)          # (nU, nR)
-    chi2 = chi2_data + prior[:, None]
-    iu, ir = np.unravel_index(np.argmin(chi2), chi2.shape)
-    k = 1 + (model in RC_MODELS or model == "mond_a0")
-    return {
-        "name": gal.name, "model": model, "chi2": float(chi2[iu, ir]),
-        "chi2_data": float(chi2_data[iu, ir]), "n": int(len(r)), "dof": int(len(r) - k),
-        "upsilon": float(UPSILON_GRID[iu]), "rc": float(rcs[ir]),
-        "g_obs": vo**2 / r, "g_bar": gbar[iu], "g_mod": gm[iu, ir],
-    }
+    base = _base_model(model)
+    combos = _nuisance_grid(gal) if marginalize else [(1.0, 1.0, 0.0)]
+    n_nuis = 2 if (marginalize and len(combos) > 1) else 0
+    prior_u = _prior_chi2(UPSILON_GRID)
+    best = None
+    for fD, ratio, prior_nuis in combos:
+        sq = np.sqrt(fD)
+        r = gal.r[m] * fD
+        vo, er = gal.vobs[m] * ratio, gal.err[m] * ratio
+        g = Galaxy(gal.name, r, vo, er, gal.vgas[m] * sq, gal.vdisk[m] * sq, gal.vbul[m] * sq)
+        gbar = g_baryon(g, UPSILON_GRID)  # (nU, n)
+        if model == "newton":
+            gm = gbar[:, None, :]
+            rcs = np.array([np.nan])
+        elif model == "mond":
+            gm = g_mond_simple(gbar, r, a0)[:, None, :]
+            rcs = np.array([np.nan])
+        elif model == "mond_a0":
+            # contrôle : MOND avec a0 libre par galaxie (un paramètre libre de plus, comme rc)
+            rcs = A0_KMS2_KPC * np.logspace(-0.7, 0.7, 57)
+            gm = g_mond_simple(gbar[:, None, :], r[None, None, :], rcs[None, :, None])
+        elif base in RC_MODELS:
+            rcs = np.array([rc_fixed * fD]) if rc_fixed is not None else RC_GRID
+            gm = RC_MODELS[base](gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
+        else:
+            raise ValueError(model)
+        v = velocity(gm, r)
+        chi2_data = (((v - vo) / er) ** 2).sum(axis=-1)          # (nU, nR)
+        chi2 = chi2_data + prior_u[:, None] + prior_nuis
+        iu, ir = np.unravel_index(np.argmin(chi2), chi2.shape)
+        if best is None or chi2[iu, ir] < best["chi2"]:
+            best = {
+                "name": gal.name, "model": model, "chi2": float(chi2[iu, ir]),
+                "chi2_data": float(chi2_data[iu, ir]), "n": int(len(r)),
+                "upsilon": float(UPSILON_GRID[iu]), "rc": float(rcs[ir]) / (fD if rc_fixed is not None else 1.0),
+                "dist_factor": float(fD), "inc_ratio": float(ratio),
+                "g_obs": vo**2 / r, "g_bar": gbar[iu], "g_mod": gm[iu, ir],
+            }
+    free_model = model in RC_MODELS or model == "mond_a0"
+    best["dof"] = best["n"] - (1 + n_nuis + free_model)
+    return best
 
 
-def fit_all(galaxies, model, a0=A0_KMS2_KPC, k_rdisk: float | None = None, quality_max: int = 2):
+MIN_POINTS = 8  # galaxies avec moins de points valides exclues (dof <= 0 avec 4 paramètres libres)
+
+
+def fit_all(galaxies, model, a0=A0_KMS2_KPC, k_rdisk: float | None = None, quality_max: int = 2,
+            rc_fn=None, marginalize: bool = False):
+    """rc fixé par galaxie : soit rc = k_rdisk * Rdisk (modèles « _k »), soit rc = rc_fn(galaxie)
+    (modèles « _law »). Sinon rc est libre pour les modèles TCE."""
     out = []
     for gal in galaxies:
         if gal.quality and gal.quality > quality_max:
             continue
-        if model.endswith("_k"):
+        if _good(gal).sum() < MIN_POINTS:
+            continue
+        if rc_fn is not None:
+            rc = rc_fn(gal)
+            if not np.isfinite(rc) or rc <= 0:
+                continue
+            out.append(fit_galaxy(gal, model, a0, rc_fixed=rc, marginalize=marginalize))
+        elif model.endswith("_k"):
             if not np.isfinite(gal.rdisk) or gal.rdisk <= 0:
                 continue
-            out.append(fit_galaxy(gal, model, a0, rc_fixed=k_rdisk * gal.rdisk))
+            out.append(fit_galaxy(gal, model, a0, rc_fixed=k_rdisk * gal.rdisk, marginalize=marginalize))
         else:
-            out.append(fit_galaxy(gal, model, a0))
+            out.append(fit_galaxy(gal, model, a0, marginalize=marginalize))
     return out
 
 
-def fit_k_global(galaxies, a0=A0_KMS2_KPC, ks=np.logspace(-0.5, 1.5, 21), quality_max=2, model="tce_k"):
+def fit_k_global(galaxies, a0=A0_KMS2_KPC, ks=np.logspace(-0.5, 1.5, 21), quality_max=2,
+                 model="tce_k", marginalize: bool = False):
     """Cherche le k unique (rc = k Rdisk) qui minimise le chi2 total."""
     totals = []
     for k in ks:
-        res = fit_all(galaxies, model, a0, k_rdisk=k, quality_max=quality_max)
+        res = fit_all(galaxies, model, a0, k_rdisk=k, quality_max=quality_max, marginalize=marginalize)
         totals.append(sum(r["chi2"] for r in res))
     i = int(np.argmin(totals))
     return float(ks[i]), np.array(totals)
+
+
+# --------------------------------------------------------------------------
+# Lois candidates pour rc (surface densité baryonique)
+# --------------------------------------------------------------------------
+G_KPC = 4.30091e-6        # kpc (km/s)^2 / M_sun
+UPSILON_STAR = UPSILON_DISK_PRIOR  # pour estimer M_bar et Sigma_b
+HELIUM_FACTOR = 1.33
+#: Sigma_dagger = a0 / G, surface densité critique de MOND (M_sun/pc^2)
+SIGMA_DAGGER = A0_KMS2_KPC / G_KPC / 1e6
+
+
+def baryonic_mass(gal: Galaxy) -> float:
+    """M_bar = Upsilon* L[3.6] + 1.33 M_HI, en M_sun (Upsilon* = 0,5 à 3,6 micron)."""
+    return (UPSILON_STAR * gal.lum + HELIUM_FACTOR * gal.mhi) * 1e9
+
+
+def central_surface_density(gal: Galaxy) -> float:
+    """Sigma_b = Upsilon* x brillance centrale du disque, en M_sun/pc^2."""
+    return UPSILON_STAR * gal.sbdisk
+
+
+def rc_law_rdisk(gal, k):
+    """L1 : rc = k Rdisk."""
+    return k * gal.rdisk
+
+
+def rc_law_mass(gal, k, a0=A0_KMS2_KPC):
+    """L2 : rc = k sqrt(G M_bar / a0), rayon où g_bar = a0."""
+    return k * np.sqrt(G_KPC * baryonic_mass(gal) / a0)
+
+
+def rc_law_surface(gal, k, alpha):
+    """L3 : rc = k Rdisk (Sigma_b / Sigma_dagger)^alpha ; alpha = 0 redonne L1."""
+    return k * gal.rdisk * (central_surface_density(gal) / SIGMA_DAGGER) ** alpha
+
+
+LAWS = {
+    "L1_rdisk": (rc_law_rdisk, {"k": np.logspace(-1.5, 1.5, 25)}),
+    "L2_masse": (rc_law_mass, {"k": np.logspace(-1.5, 1.5, 25)}),
+    "L3_surface": (rc_law_surface, {"k": np.logspace(-1.5, 1.5, 25), "alpha": np.linspace(-1.5, 1.5, 13)}),
+}
+
+
+def law_chi2_table(galaxies, base_model: str, law: str, a0=A0_KMS2_KPC, quality_max: int = 2,
+                   marginalize: bool = False):
+    """chi2 par galaxie sur toute la grille de paramètres globaux de la loi.
+    Renvoie (grille de paramètres [liste de dicts], noms de galaxies, matrice chi2 [n_params, n_gal])."""
+    fn, grids = LAWS[law]
+    keys = list(grids)
+    mesh = np.meshgrid(*[grids[k] for k in keys], indexing="ij")
+    params = [dict(zip(keys, vals)) for vals in zip(*[m.ravel() for m in mesh])]
+    sel = [g for g in galaxies if not (g.quality and g.quality > quality_max) and _good(g).sum() >= MIN_POINTS
+           and np.isfinite(g.rdisk) and g.rdisk > 0 and np.isfinite(g.lum) and np.isfinite(g.sbdisk) and g.sbdisk > 0]
+    table = np.empty((len(params), len(sel)))
+    for ip, prm in enumerate(params):
+        for ig, gal in enumerate(sel):
+            rc = fn(gal, **prm)
+            table[ip, ig] = fit_galaxy(gal, base_model + "_law", a0, rc_fixed=rc, marginalize=marginalize)["chi2"] \
+                if np.isfinite(rc) and rc > 0 else np.inf
+    return params, [g.name for g in sel], table
+
+
+def law_best(params, table, mask=None):
+    """Paramètres globaux minimisant le chi2 total (éventuellement sur un sous-ensemble)."""
+    tot = table.sum(axis=1) if mask is None else table[:, mask].sum(axis=1)
+    i = int(np.argmin(tot))
+    return (params[i] if params is not None else None), i, float(tot[i])
+
+
+def cross_validate_law(table, seed: int = 0, folds: int = 2):
+    """Validation croisée : paramètres ajustés sur les autres plis, chi2 évalué sur le pli retenu.
+    Renvoie le chi2 total hors échantillon (somme sur tous les plis)."""
+    n = table.shape[1]
+    rng = np.random.default_rng(seed)
+    idx = rng.permutation(n)
+    held = 0.0
+    for f in range(folds):
+        test = np.zeros(n, dtype=bool)
+        test[idx[f::folds]] = True
+        _, i, _ = law_best(None, table, mask=~test)
+        held += table[i, test].sum()
+    return float(held)
 
 
 def summarize(results, n_global_params: int = 0):

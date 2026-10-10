@@ -65,24 +65,72 @@ Deux variantes qui évitent ce défaut, avec w = x²/(1+x²) et x = r/rc :
 
 ### 5.2 Résultats
 
-| Modèle | Paramètres libres par galaxie | χ²/dof médian | χ²/dof total | BIC | rms (dex) |
+Échantillon : 138 galaxies de qualité 1-2 ayant au moins 8 points valides (une galaxie qui a moins de
+points que de paramètres libres n'a pas de degrés de liberté). Les chiffres de la version précédente
+(163 galaxies) sont remplacés. Colonnes : χ²/dof médian, χ²/dof total, BIC, rms (dex).
+
+**Sans nuisance (D et i fixés aux valeurs publiées)** — `python examples/fit_sparc.py`
+
+| Modèle | Param. libres / galaxie | χ²/dof méd. | χ²/dof tot. | BIC | rms |
 |---|---|---|---|---|---|
-| Newton | Υ | 40,6 | 256,6 | 798 410 | 0,361 |
-| MOND (a₀ fixé) | Υ | 3,8 | 14,2 | 45 502 | 0,282 |
-| **MOND, a₀ libre (contrôle)** | Υ, a₀ | **2,0** | **5,3** | **18 297** | **0,114** |
-| TCE manuscrit (rc libre) | Υ, rc | 3,5 | 20,4 | 62 514 | 0,126 |
-| TCE V1 (rc libre) | Υ, rc | 2,8 | 12,4 | 39 045 | 0,117 |
-| TCE V2 (rc libre) | Υ, rc | 2,3 | 7,8 | 25 556 | 0,117 |
-| TCE manuscrit, rc = k Rdisk | Υ (+ k global = 1,26) | 4,9 | 30,5 | 96 072 | 0,165 |
-| TCE V1, rc = k Rdisk | Υ (+ k global = 0,40) | 4,0 | 15,4 | 49 128 | 0,177 |
-| TCE V2, rc = k Rdisk | Υ (+ k global = 0,40) | 4,5 | 15,4 | 49 135 | 0,188 |
+| Newton | Υ | 53,1 | 262,6 | 783 516 | 0,361 |
+| MOND (a₀ fixé) | Υ | 4,1 | 14,6 | 44 574 | 0,286 |
+| MOND, a₀ libre (contrôle) | Υ, a₀ | 2,4 | 5,4 | 17 678 | 0,114 |
+| TCE manuscrit (rc libre) | Υ, rc | 3,7 | 20,9 | 61 689 | 0,126 |
+| TCE V1 (rc libre) | Υ, rc | 3,1 | 12,7 | 38 272 | 0,117 |
+| TCE V2 (rc libre) | Υ, rc | 2,5 | 8,0 | 24 867 | 0,118 |
+| TCE V2, rc = k·Rdisk (k = 0,40) | Υ | 4,7 | 15,8 | 48 076 | 0,188 |
+
+**Avec distance et inclinaison marginalisées** — `python examples/fit_sparc.py --marginalize`.
+Pour chaque galaxie, la distance D' = D(1 + z·e_D/D) et l'inclinaison i' = i + z·e_i ont une prior
+gaussienne (grille 7 × 7 sur ±2σ) ; les rayons deviennent r·D'/D, les vitesses baryoniques
+V_bar·√(D'/D), les vitesses observées V_obs·sin i / sin i'. Le χ² contient les priors (maximum a posteriori).
+
+| Modèle | Param. libres / galaxie | χ²/dof méd. | χ²/dof tot. | BIC | rms |
+|---|---|---|---|---|---|
+| Newton | Υ, D, i | 29,6 | 199,6 | 543 122 | 0,282 |
+| MOND (a₀ fixé) | Υ, D, i | 3,0 | 7,0 | 22 189 | 0,278 |
+| MOND, a₀ libre (contrôle) | Υ, D, i, a₀ | 2,6 | 5,6 | 18 760 | 0,111 |
+| TCE manuscrit (rc libre) | Υ, D, i, rc | 3,0 | 11,6 | 34 162 | 0,107 |
+| TCE V1 (rc libre) | Υ, D, i, rc | 2,4 | 6,9 | 22 152 | 0,100 |
+| **TCE V2 (rc libre)** | Υ, D, i, rc | **2,0** | **4,5** | **16 037** | 0,100 |
+| TCE V2, rc = k·Rdisk (k = 0,32) | Υ, D, i | 2,8 | 6,9 | 21 904 | 0,168 |
 
 ### 5.3 Lecture prudente
 
-- **Le défaut est corrigé.** V1 et V2 ne donnent jamais g < g_baryonique (contre 23,7 %).
-- **V2 est la meilleure des formes TCE** : χ²/dof total 7,8 contre 14,2 pour MOND à a₀ fixé, et un BIC plus bas malgré un paramètre libre de plus par galaxie.
-- **Mais le contrôle est décisif** : MOND avec a₀ libre par galaxie fait mieux que toutes les variantes TCE (χ²/dof total 5,3 ; BIC 18 297). L'avantage de TCE sur MOND vient donc de la liberté d'un paramètre par galaxie, pas de la forme de la loi. À flexibilité égale, ces données ne favorisent pas TCE.
-- **rc = k·Rdisk avec un seul k** reste moins bon que MOND à a₀ fixé pour le manuscrit, et à peine meilleur pour V1 et V2 (χ²/dof total 15,4 contre 14,2) : rc n'est pas fixé par une échelle simple.
-- Les variantes V1 et V2 sont des formes écrites après avoir vu le défaut : elles n'ont pas de dérivation, seulement des limites correctes.
-- **Le problème des horloges (section 1) persiste.** Dans V1 et V2, R₀/R_v = 1 + w·a₀/g (ou 1 + w√(a₀/g)) atteint ~100 à faible accélération : si dt gouverne les horloges atomiques, l'écart reste d'ordre 1 là où la RG donne 10⁻⁶ à 10⁻⁸.
-- Les χ² absolus ne sont pas interprétables sans les incertitudes de distance et d'inclinaison ; seules les comparaisons relatives le sont.
+- **Le défaut est corrigé.** V1 et V2 ne donnent jamais g < g_baryonique (contre 23,5 % pour le manuscrit).
+- **Modéliser D et i change beaucoup.** Le χ²/dof total de MOND passe de 14,6 à 7,0 : une grande partie de l'écart apparent venait des incertitudes de distance et d'inclinaison. Les χ² absolus restent loin de 1 (autres systématiques non modélisées : asymétries, supports de pression, etc.).
+- **Le classement dépend du traitement.** Sans nuisance, MOND à a₀ libre bat TCE V2 (5,4 contre 8,0). Avec nuisance, c'est TCE V2 qui bat MOND à a₀ libre (4,5 contre 5,6 ; BIC 16 037 contre 18 760). La conclusion « TCE n'apporte rien à flexibilité égale » du premier ajustement n'est donc pas robuste.
+- **Mais le contrôle est imparfait.** Les deux familles à un paramètre ne sont pas équivalentes : a₀ libre ne fait que décaler une transition de forme fixe, rc libre déplace la transition de V2 en rayon. Un contrôle équitable utiliserait une famille MOND à deux échelles (a₀ et un rayon de transition). Je ne l'ai pas fait.
+- **rc = k·Rdisk avec un seul k** reste équivalent à MOND à a₀ fixé (χ²/dof total 6,9 contre 7,0) : l'avantage de TCE vient entièrement du rc propre à chaque galaxie.
+- **Le problème des horloges (section 1) persiste.** Dans V1 et V2, R₀/R_v atteint ~100 à faible accélération : si dt gouverne les horloges atomiques, l'écart reste d'ordre 1 là où la RG donne 10⁻⁶ à 10⁻⁸.
+
+## 6. Une loi pour rc à partir de la densité de surface baryonique ? (`examples/fit_sparc_laws.py`)
+
+Lois testées sur TCE V2, distances et inclinaisons marginalisées, 138 galaxies, 3 118 points. Les paramètres
+globaux sont ajustés sur une moitié des galaxies et évalués sur l'autre (validation croisée à 2 plis,
+moyenne de 20 tirages). Σ_b = Υ*·SB_disque, Σ† = a₀/G ≈ 861 M☉/pc², M_bar = Υ*·L[3.6] + 1,33·M_HI.
+
+| Modèle | Paramètres globaux | χ² total | χ² hors échantillon |
+|---|---|---|---|
+| MOND (a₀ fixé) | 0 | 18 858 | 18 858 |
+| MOND, a₀ libre par galaxie | 0 (+1/galaxie) | 14 319 | — |
+| TCE V2, rc libre par galaxie | 0 (+1/galaxie) | 11 596 | — |
+| L1 : rc = k·Rdisk | 1 (k = 0,32) | 18 565 | 19 239 |
+| L2 : rc = k·√(G M_bar / a₀) | 1 (k = 0,32) | 18 900 | 19 575 |
+| L3 : rc = k·Rdisk·(Σ_b/Σ†)^α | 2 (k = 0,32 ; α = 0,00) | 18 565 | 19 801 |
+
+**Résultat : aucune loi ne bat MOND hors échantillon.** L3 retombe sur L1 (α = 0, Δχ² = 0) : la densité
+de surface n'apporte aucune information au-delà de Rdisk. Les paramètres optimaux (k ≈ 0,3) rendent
+rc petit devant les rayons mesurés, et V2 tend alors vers g + √(g·a₀) sur toute la courbe, c'est-à-dire vers
+une interpolation de type MOND. Tout le gain de rc libre (18 858 → 11 596) vient de la dispersion de rc d'une galaxie à l'autre,
+que ni Rdisk, ni M_bar, ni Σ_b ne prédisent.
+
+Corrélations de log rc libre (95 galaxies, rc hors bords de grille) : M_bar +0,63, Vflat +0,63 (circulaire : Vflat
+vient de la courbe elle-même), Rdisk +0,52, Reff +0,50, Σ_b +0,42, fraction de gaz −0,45. Régression
+log rc ~ Rdisk + Σ_b + M_bar : R² = 0,40, dispersion résiduelle 0,51 dex pour un intervalle de rc de 2,8 dex.
+rc est donc en partie corrélé à la masse et à la taille, mais pas au point de définir une loi prédictive.
+
+Conséquence pour la théorie : en l'état, rc est un paramètre libre par galaxie, pas une prédiction. Pour que
+TCE soit prédictive, il faudrait une dérivation qui lie rc à des quantités mesurables indépendamment de la
+courbe de rotation, ou un test d'une famille MOND à deux échelles pour savoir si rc fait vraiment mieux.

@@ -57,5 +57,56 @@ class TestSparcFit(unittest.TestCase):
         self.assertGreater(s["points"], 10)
 
 
+class TestNuisance(unittest.TestCase):
+    def _galaxy_with_distance_and_inclination_bias(self, fD=1.1, inc_true=65.0):
+        gal = synthetic_galaxy(rc_true=4.0)
+        gal.distance, gal.e_dist, gal.inc, gal.e_inc = 10.0, 1.0, 60.0, 5.0
+        sq = np.sqrt(fD)
+        scaled = sparc.Galaxy("s", gal.r * fD, gal.vobs, gal.err, gal.vgas * sq, gal.vdisk * sq, gal.vbul * sq)
+        v = sparc.velocity(sparc.g_tce_v2(sparc.g_baryon(scaled, 0.5)[0], scaled.r, 4.0 * fD), scaled.r)
+        ratio = np.sin(np.radians(60.0)) / np.sin(np.radians(inc_true))
+        gal.vobs = v / ratio
+        gal.err = np.full_like(gal.r, 1.0)
+        return gal
+
+    def test_marginalization_absorbs_distance_and_inclination_bias(self):
+        gal = self._galaxy_with_distance_and_inclination_bias()
+        fixed = sparc.fit_galaxy(gal, "tce_v2")
+        marg = sparc.fit_galaxy(gal, "tce_v2", marginalize=True)
+        self.assertLess(marg["chi2"], 0.3 * fixed["chi2"])
+        self.assertAlmostEqual(marg["dist_factor"], 1.1, delta=0.1)
+
+    def test_marginalization_never_worse_than_fixed_up_to_priors(self):
+        gal = synthetic_galaxy()
+        gal.distance, gal.e_dist, gal.inc, gal.e_inc = 10.0, 1.0, 60.0, 5.0
+        a = sparc.fit_galaxy(gal, "mond")["chi2"]
+        b = sparc.fit_galaxy(gal, "mond", marginalize=True)["chi2"]
+        self.assertLessEqual(b, a + 1e-9)  # le point neutre (z = 0) est dans la grille
+
+    def test_missing_metadata_falls_back_to_no_nuisance(self):
+        gal = synthetic_galaxy()
+        self.assertEqual(len(sparc._nuisance_grid(gal)), 1)
+
+
+class TestRcLaws(unittest.TestCase):
+    def test_alpha_zero_recovers_rdisk_law(self):
+        gal = synthetic_galaxy()
+        gal.rdisk, gal.sbdisk = 2.0, 500.0
+        self.assertAlmostEqual(sparc.rc_law_surface(gal, 1.7, 0.0), sparc.rc_law_rdisk(gal, 1.7), places=12)
+
+    def test_surface_law_scaling(self):
+        gal = synthetic_galaxy()
+        gal.rdisk, gal.sbdisk = 2.0, sparc.SIGMA_DAGGER / sparc.UPSILON_STAR   # Sigma_b = 1 Sigma_dagger
+        self.assertAlmostEqual(sparc.rc_law_surface(gal, 1.0, 1.0) / (gal.rdisk * 1.0), 1.0, places=9)
+
+    def test_cross_validation_picks_global_minimum_on_toy_table(self):
+        # 3 jeux de paramètres, 10 galaxies : le jeu 1 est le meilleur partout
+        table = np.array([[5.0] * 10, [1.0] * 10, [3.0] * 10])
+        self.assertAlmostEqual(sparc.cross_validate_law(table), 10.0)
+
+    def test_dagger_surface_density_is_physical(self):
+        self.assertTrue(500 < sparc.SIGMA_DAGGER < 1500)
+
+
 if __name__ == "__main__":
     unittest.main()

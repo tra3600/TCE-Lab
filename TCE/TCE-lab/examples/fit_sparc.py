@@ -19,18 +19,21 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--data", default="data/sparc")
 ap.add_argument("--quality", type=int, default=2, help="qualité max (1 haute, 2 moyenne, 3 basse)")
 ap.add_argument("--plots", action="store_true")
+ap.add_argument("--marginalize", action="store_true",
+                help="marginalise distance et inclinaison (priors gaussiens, grille 7x7)")
 args = ap.parse_args()
 
 sparc.download_sparc(args.data)
 gals = sparc.load_sparc(args.data)
-print(f"{len(gals)} galaxies chargées ; qualité <= {args.quality}")
+print(f"{len(gals)} galaxies chargées ; qualité <= {args.quality} ; distance et inclinaison marginalisées : {args.marginalize}")
 
 FREE = ("newton", "mond", "mond_a0", "tce", "tce_v1", "tce_v2")
-res = {m: sparc.fit_all(gals, m, quality_max=args.quality) for m in FREE}
+res = {m: sparc.fit_all(gals, m, quality_max=args.quality, marginalize=args.marginalize) for m in FREE}
 k_best = {}
 for base in ("tce", "tce_v1", "tce_v2"):
-    k_best[base], _ = sparc.fit_k_global(gals, quality_max=args.quality, model=base + "_k")
-    res[base + "_k"] = sparc.fit_all(gals, base + "_k", k_rdisk=k_best[base], quality_max=args.quality)
+    k_best[base], _ = sparc.fit_k_global(gals, quality_max=args.quality, model=base + "_k", marginalize=args.marginalize)
+    res[base + "_k"] = sparc.fit_all(gals, base + "_k", k_rdisk=k_best[base], quality_max=args.quality,
+                                     marginalize=args.marginalize)
 nglob = {m: (1 if m.endswith("_k") else 0) for m in res}
 
 print(f"\n{'modèle':8} {'N gal':>6} {'chi2/dof méd.':>14} {'chi2/dof tot.':>14} {'BIC':>10} {'rms (dex)':>10}")
@@ -54,13 +57,13 @@ if ok.sum() > 3:
 print(f"galaxies avec rc au bord de la grille : {(~ok).sum()} / {len(rc)}")
 
 os.makedirs("results", exist_ok=True)
-with open("results/sparc_fit.csv", "w", newline="") as f:
+with open(("results/sparc_fit_marg.csv" if args.marginalize else "results/sparc_fit.csv"), "w", newline="") as f:
     w = csv.writer(f)
     w.writerow(["galaxie", "modele", "chi2", "dof", "upsilon_disque", "rc_kpc"])
     for m, r in res.items():
         for x in r:
             w.writerow([x["name"], m, f"{x['chi2']:.2f}", x["dof"], f"{x['upsilon']:.3f}", f"{x['rc']:.3f}"])
-print("Écrit results/sparc_fit.csv")
+print("CSV écrit dans results/")
 
 if args.plots:
     import matplotlib
@@ -83,5 +86,5 @@ if args.plots:
         ax[1].hist([x["chi2"] / x["dof"] for x in res[m]], bins=np.logspace(-1, 2, 30), alpha=0.5, color=c_, label=m)
     ax[1].set(xscale="log", xlabel="chi2 / dof (par galaxie)", title="Qualité d'ajustement"); ax[1].legend()
     ax[2].loglog(rdisk[ok], rc[ok], "o", ms=4); ax[2].set(xlabel="Rdisk (kpc)", ylabel="rc ajusté (kpc)", title="rc libre vs Rdisk")
-    fig.tight_layout(); fig.savefig("results/sparc_fit.png", dpi=130)
-    print("Écrit results/sparc_fit.png")
+    fig.tight_layout(); fig.savefig(("results/sparc_fit_marg.png" if args.marginalize else "results/sparc_fit.png"), dpi=130)
+    print("Figure écrite dans results/")
