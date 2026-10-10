@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import urllib.request
 import zipfile
 from dataclasses import dataclass
@@ -127,6 +128,35 @@ def load_sparc(directory: str) -> list[Galaxy]:
                 sbdisk=meta.get("sbdisk", np.nan),
             ))
     return galaxies
+
+
+def load_rotmod_directory(directory: str) -> list[Galaxy]:
+    """Charge un dossier de fichiers `*_rotmod.dat` au format SPARC (colonnes :
+    Rad[kpc] Vobs errV Vgas Vdisk Vbul SBdisk SBbul ; en-tête « # Distance = X Mpc »).
+    Sert à tester le modèle sur un échantillon indépendant (ex. THINGS, de Blok+2008) dont
+    les courbes baryoniques ont été converties à ce format. Les méta-données (inclinaison,
+    erreur de distance...) sont inconnues : la marginalisation est alors sans effet."""
+    out = []
+    for fn in sorted(os.listdir(directory)):
+        if not fn.endswith("_rotmod.dat"):
+            continue
+        dist = np.nan
+        rows = []
+        with open(os.path.join(directory, fn), encoding="latin-1") as f:
+            for ln in f:
+                if ln.startswith("#"):
+                    mt = re.search(r"Distance\s*=\s*([0-9.]+)", ln)
+                    if mt:
+                        dist = float(mt.group(1))
+                elif ln.strip():
+                    rows.append([float(v) for v in ln.split()])
+        if not rows:
+            continue
+        d = np.array(rows)
+        out.append(Galaxy(name=fn.replace("_rotmod.dat", ""), r=d[:, 0], vobs=d[:, 1], err=d[:, 2],
+                          vgas=d[:, 3], vdisk=d[:, 4], vbul=d[:, 5] if d.shape[1] > 5 else np.zeros(len(d)),
+                          distance=dist))
+    return out
 
 
 # --------------------------------------------------------------------------

@@ -171,3 +171,42 @@ Sans nuisance, les mêmes tests donnent TCE V2 à égalité avec `mond_rs` (73/1
 - **V1 est moins bon que `mond_rs`** (39/138 galaxies) : l'avantage de V2 ne vient pas de la structure en « portail », mais de la forme précise de la transition.
 - **V2 a été écrit après avoir vu le défaut de la forme (5)** ; choisir la forme parmi plusieurs candidats puis la comparer sur les mêmes données gonfle l'avantage apparent. Il faudrait la tester sur des données indépendantes (autre échantillon que SPARC).
 - Les remarques précédentes tiennent toujours : rc reste un paramètre libre par galaxie (section 6) et le problème des horloges (section 1) n'est pas résolu.
+
+## 8. Test hors échantillon sur THINGS / LITTLE THINGS
+
+### 8.1 Ce qui a pu être fait, et ce qui ne l'a pas pu
+
+| Élément | Statut |
+|---|---|
+| Courbes de rotation **baryoniques radiales** de THINGS (de Blok+2008 : Vgas, Vstar) | **Non récupérées** : la page de données de l'enquête THINGS ne contient que des cubes et cartes FITS bruts, et la table de de Blok+2008 n'est pas sur le CDS. Un ajustement radial de TCE V2 sur THINGS exige ces courbes |
+| LITTLE THINGS (Oh+2015, CDS J/AJ/149/180) | Récupéré : 26 naines HI, mais le CDS ne fournit que des courbes de rotation totales normalisées et des masses intégrées (gaz, étoiles), pas de profils baryoniques radiaux |
+| Test de la relation de Tully–Fisher baryonique (éq. 7) sur LITTLE THINGS | **Fait** (`examples/test_littlethings_btfr.py`) |
+| Chaîne d'ajustement radial prête pour un échantillon externe | **Prête** (`sparc.load_rotmod_directory` et `examples/fit_external.py`), testée sur des données synthétiques seulement |
+
+Trois galaxies de LITTLE THINGS sont déjà dans SPARC (DDO 154, DDO 168, NGC 2366) et sont exclues ; 4 autres n'ont pas de masse stellaire. Reste 19 galaxies indépendantes.
+
+### 8.2 Résultats de la relation de Tully–Fisher baryonique, v⁴ = G·M_bar·a₀ (a₀ = 1,2×10⁻¹⁰ m/s²)
+
+| Échantillon | N | ⟨log(v_obs/v_pred)⟩ | a₀ ajusté (m/s²) | Pente de la BTFR [16-84 %] |
+|---|---|---|---|---|
+| SPARC (Vflat, qualité 1) | 87 | +0,037 ± 0,007 | 1,7×10⁻¹⁰ | 3,56 [3,45–3,68] |
+| LITTLE THINGS, V(Rmax) | 19 | +0,009 ± 0,043 | 1,3×10⁻¹⁰ | 1,68 [0,98–2,18] |
+| LITTLE THINGS, Viso(Rmax) | 19 | +0,021 ± 0,037 | 1,5×10⁻¹⁰ | 1,98 [1,42–2,43] |
+| LITTLE THINGS, gaz dominant | 11 | −0,059 ± 0,040 | 7×10⁻¹¹ | 2,65 [1,50–3,30] |
+
+Lecture prudente :
+- **La normalisation est compatible** : sur un échantillon indépendant de SPARC, la vitesse prédite par l'éq. (7) avec a₀ = 1,2×10⁻¹⁰ m/s² est correcte à 0,01 ± 0,04 dex près (a₀ ajusté 1,3×10⁻¹⁰), donc le même a₀ vaut pour les naines. C'est le résultat que MOND prédit aussi : ce test ne distingue pas TCE de MOND.
+- **La pente n'est pas reproduite** : 1,7 [1,0–2,2] au lieu de 4, et même la pente de SPARC (3,56) est inférieure à 4 avec cette recette. L'échantillon LITTLE THINGS couvre seulement 1 dex en vitesse (12–126 km/s), la masse varie de 0,5 dex à 1 dex pour une même vitesse (dispersion 0,5 dex), et la pente dépend fortement d'une galaxie : DDO 210 (V = 12 km/s) la fait varier de 1,05 à 1,88 quand on la retire.
+- **V(Rmax) n'est pas une vitesse plate** pour beaucoup de naines (la courbe monte encore), ce qui biaise la pente vers le bas. Un test propre de la pente demande une vitesse plate bien définie.
+- **Ce test ne compare pas les formes de rotation** (V1, V2, MOND) : il ne valide donc pas la forme V2, écrite après avoir vu SPARC. C'est le test radial sur des courbes baryoniques indépendantes qui le ferait.
+
+### 8.3 Pour faire le test radial sur THINGS
+
+Il faut fournir les courbes baryoniques radiales (gaz et étoiles, rapport masse/luminosité à 1) de THINGS au format SPARC `*_rotmod.dat`
+(colonnes `Rad Vobs errV Vgas Vdisk Vbul SBdisk SBbul`, en-tête `# Distance = X Mpc`), puis lancer :
+
+```
+python examples/fit_external.py --dir data/things_rotmod
+```
+
+Le script exclut les galaxies déjà dans SPARC et compare Newton, MOND (a₀ fixé, a₀ libre, rayon de transition libre, indice libre) et TCE V1/V2 à un paramètre libre par galaxie. Seul un résultat où V2 bat `mond_rs` sur ces données indépendantes, avec le même nombre de paramètres, validerait l'avantage mesuré sur SPARC (section 7).
