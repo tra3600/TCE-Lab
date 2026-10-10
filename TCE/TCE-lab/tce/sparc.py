@@ -11,6 +11,8 @@ Modèles comparés (accélération radiale g = v^2 / r, en (km/s)^2/kpc)
 newton   : g = g_bar
 mond     : g = nu(g_bar/a0) g_bar, interpolation « simple »
 mond_a0  : contrôle, MOND avec a0 libre par galaxie (« rc » = a0 dans la sortie)
+mond_rs  : contrôle équitable, MOND (a0 fixé) avec rayon de transition libre rs (« portail »)
+mond_n   : contrôle, MOND (a0 fixé) avec indice d'interpolation libre n
 tce      : g = g_bar sqrt((1 + x^2 a0/g_bar) / (1 + x^2)), x = r/rc, rc libre par galaxie
 tce_k    : même forme avec rc = k * Rdisk, k unique pour toutes les galaxies
 tce_v1   : variante de l'éq. (5), g = g_bar sqrt(1 + w a0/g_bar), w = x^2/(1+x^2)
@@ -159,6 +161,20 @@ def _w(r, rc):
     return x2 / (1.0 + x2)
 
 
+def g_mond_n(gbar, r=None, n=1.0, a0=A0_KMS2_KPC, **_):
+    """MOND avec indice d'interpolation n : g = g_bar nu_n(g_bar/a0),
+    nu_n = [(1 + sqrt(1 + 4 y^-n)) / 2]^(1/n) ; n = 1 : « simple », n = 2 : « standard »."""
+    gb = np.maximum(gbar, 1e-12)
+    y = gb / a0
+    return gb * ((1.0 + np.sqrt(1.0 + 4.0 * y ** (-n))) / 2.0) ** (1.0 / n)
+
+
+def g_mond_gated(gbar, r, rs, a0=A0_KMS2_KPC, **_):
+    """MOND « à portail » : g = g_bar + w (g_MOND - g_bar), w = x^2/(1+x^2), x = r/rs.
+    Même structure que TCE V2 (g_bar + w sqrt(g_bar a0)) mais avec l'interpolation MOND."""
+    return gbar + _w(r, rs) * (g_mond_simple(gbar, r, a0) - gbar)
+
+
 def g_tce_v1(gbar, r, rc, a0=A0_KMS2_KPC, **_):
     """Variante V1 (couplage racine carrée) : g = g_bar sqrt(1 + w a0/g_bar)."""
     gb = np.maximum(gbar, 1e-12)
@@ -201,6 +217,10 @@ def _good(gal: Galaxy):
 
 #: nombre de sigmas explorés pour la distance et l'inclinaison (grille de 7 points sur +-2 sigma)
 NUISANCE_Z = np.linspace(-2.0, 2.0, 7)
+
+
+#: contrôles MOND à un paramètre libre par galaxie (la sortie « rc » contient ce paramètre)
+CONTROL_MODELS = ("mond_a0", "mond_rs", "mond_n")
 
 
 def _base_model(model: str) -> str:
@@ -257,6 +277,14 @@ def fit_galaxy(gal: Galaxy, model: str, a0: float = A0_KMS2_KPC, rc_fixed: float
             # contrôle : MOND avec a0 libre par galaxie (un paramètre libre de plus, comme rc)
             rcs = A0_KMS2_KPC * np.logspace(-0.7, 0.7, 57)
             gm = g_mond_simple(gbar[:, None, :], r[None, None, :], rcs[None, :, None])
+        elif model == "mond_rs":
+            # contrôle équitable : MOND (a0 fixé) avec un rayon de transition libre
+            rcs = RC_GRID
+            gm = g_mond_gated(gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
+        elif model == "mond_n":
+            # contrôle : MOND (a0 fixé) avec indice d'interpolation libre
+            rcs = np.logspace(np.log10(0.3), np.log10(8.0), 57)
+            gm = g_mond_n(gbar[:, None, :], n=rcs[None, :, None], a0=a0)
         elif base in RC_MODELS:
             rcs = np.array([rc_fixed * fD]) if rc_fixed is not None else RC_GRID
             gm = RC_MODELS[base](gbar[:, None, :], r[None, None, :], rcs[None, :, None], a0)
@@ -274,7 +302,7 @@ def fit_galaxy(gal: Galaxy, model: str, a0: float = A0_KMS2_KPC, rc_fixed: float
                 "dist_factor": float(fD), "inc_ratio": float(ratio),
                 "g_obs": vo**2 / r, "g_bar": gbar[iu], "g_mod": gm[iu, ir],
             }
-    free_model = model in RC_MODELS or model == "mond_a0"
+    free_model = model in RC_MODELS or model in CONTROL_MODELS
     best["dof"] = best["n"] - (1 + n_nuis + free_model)
     return best
 

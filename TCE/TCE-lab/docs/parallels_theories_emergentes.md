@@ -134,3 +134,40 @@ rc est donc en partie corrélé à la masse et à la taille, mais pas au point d
 Conséquence pour la théorie : en l'état, rc est un paramètre libre par galaxie, pas une prédiction. Pour que
 TCE soit prédictive, il faudrait une dérivation qui lie rc à des quantités mesurables indépendamment de la
 courbe de rotation, ou un test d'une famille MOND à deux échelles pour savoir si rc fait vraiment mieux.
+
+## 7. Contrôle équitable : TCE contre des familles MOND à un paramètre libre (`examples/fit_sparc_controls.py`)
+
+Question laissée ouverte en 5.3 : l'avantage de rc libre vient-il de TCE ou de la présence d'un second paramètre ?
+Chaque modèle a les mêmes nuisances et **un seul paramètre libre de plus par galaxie** (138 galaxies) :
+`mond_a0` (a₀ libre), `mond_rs` (a₀ fixé, rayon de transition libre : g = g_bar + w·(g_MOND − g_bar), même structure que
+TCE V2), `mond_n` (a₀ fixé, indice d'interpolation n libre), et TCE avec rc libre.
+
+| Modèle (1 paramètre libre / galaxie) | χ² total, sans nuisance | BIC | χ² total, D et i marginalisés | BIC |
+|---|---|---|---|---|
+| MOND (a₀ fixé, 0 paramètre) | 43 464 | 44 574 | 18 858 | 22 189 |
+| MOND, a₀ libre | **15 457** | **17 678** | 14 319 | 18 760 |
+| MOND, rayon de transition libre (`mond_rs`) | 26 372 | 28 592 | 13 644 | 18 085 |
+| MOND, indice d'interpolation libre (`mond_n`) | 29 461 | 31 682 | 14 937 | 19 378 |
+| TCE du manuscrit, rc libre | 59 469 | 61 689 | 29 721 | 34 162 |
+| TCE V1, rc libre | 36 051 | 38 272 | 17 711 | 22 152 |
+| TCE V2, rc libre | 22 646 | 24 867 | **11 596** | **16 037** |
+
+Test de signe par galaxie (même nombre de paramètres), D et i marginalisés :
+
+| A contre B | A meilleur sur | p | médiane Δχ² |
+|---|---|---|---|
+| TCE V2 contre `mond_rs` | 85 / 138 | 0,008 | −0,8 |
+| TCE V2 contre `mond_a0` | 95 / 138 | 1×10⁻⁵ | −3,9 |
+| TCE V2 contre `mond_n` | 100 / 138 | 1×10⁻⁷ | −3,2 |
+| TCE V1 contre `mond_rs` | 39 / 138 | 3×10⁻⁷ | +1,5 |
+
+Sans nuisance, les mêmes tests donnent TCE V2 à égalité avec `mond_rs` (73/138, p = 0,55) et en retrait de `mond_a0`.
+
+### Lecture prudente
+
+- **Une partie de l'avantage de rc libre est générique** : MOND avec n'importe quel second paramètre passe de χ²/dof 7,0 à 5,3-5,8 une fois D et i marginalisés. Seul un contrôle à nombre de paramètres égal permet de le voir.
+- **TCE V2 reste devant, de peu.** Δχ² = 2 048 sur `mond_rs`, mais seulement 0,8 de médiane par galaxie ; l'effet est statistiquement significatif (p = 0,008) sans nuisance non modélisée supplémentaire, et il disparaît (p = 0,55) quand D et i ne sont pas marginalisés. Il est donc fragile devant les systématiques de modélisation.
+- **D'où vient la différence de forme ?** V2 écrit g = g_bar + w·√(g_bar·a₀), qui revient vers Newton comme √(a₀/g_bar), plus lentement que l'interpolation « simple » de MOND (a₀/g_bar). Les données semblent légèrement préférer ce retour lent, mais `mond_n` (indice libre) ne le reproduit pas, ce qui mérite une étude séparée.
+- **V1 est moins bon que `mond_rs`** (39/138 galaxies) : l'avantage de V2 ne vient pas de la structure en « portail », mais de la forme précise de la transition.
+- **V2 a été écrit après avoir vu le défaut de la forme (5)** ; choisir la forme parmi plusieurs candidats puis la comparer sur les mêmes données gonfle l'avantage apparent. Il faudrait la tester sur des données indépendantes (autre échantillon que SPARC).
+- Les remarques précédentes tiennent toujours : rc reste un paramètre libre par galaxie (section 6) et le problème des horloges (section 1) n'est pas résolu.

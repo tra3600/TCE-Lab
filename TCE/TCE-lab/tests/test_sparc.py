@@ -57,6 +57,33 @@ class TestSparcFit(unittest.TestCase):
         self.assertGreater(s["points"], 10)
 
 
+class TestMondControls(unittest.TestCase):
+    def test_interpolation_index_recovers_simple_and_standard(self):
+        gb = np.logspace(-1, 7, 30)
+        np.testing.assert_allclose(sparc.g_mond_n(gb, n=1.0), sparc.g_mond_simple(gb, None), rtol=1e-9)
+        y = gb / sparc.A0_KMS2_KPC
+        standard = gb * np.sqrt(0.5 + np.sqrt(0.25 + 1.0 / y**2))
+        np.testing.assert_allclose(sparc.g_mond_n(gb, n=2.0), standard, rtol=1e-9)
+
+    def test_deep_limit_is_independent_of_n(self):
+        gb = np.array([1e-8])
+        for n in (0.5, 1.0, 3.0):
+            np.testing.assert_allclose(sparc.g_mond_n(gb, n=n), np.sqrt(gb * sparc.A0_KMS2_KPC), rtol=2e-2)
+
+    def test_gated_mond_limits(self):
+        gb = np.logspace(0, 5, 20)
+        np.testing.assert_allclose(sparc.g_mond_gated(gb, 1.0, 1e6), gb, rtol=1e-6)               # rs >> r : Newton
+        np.testing.assert_allclose(sparc.g_mond_gated(gb, 1.0, 1e-6), sparc.g_mond_simple(gb, 1.0), rtol=1e-6)  # rs << r : MOND
+
+    def test_gated_mond_fit_recovers_rs(self):
+        gal = synthetic_galaxy()
+        gbar = sparc.g_baryon(gal, 0.5)[0]
+        gal.vobs = sparc.velocity(sparc.g_mond_gated(gbar, gal.r, 5.0), gal.r)
+        fit = sparc.fit_galaxy(gal, "mond_rs")
+        self.assertAlmostEqual(np.log10(fit["rc"]), np.log10(5.0), delta=0.08)
+        self.assertEqual(fit["dof"], fit["n"] - 2)
+
+
 class TestNuisance(unittest.TestCase):
     def _galaxy_with_distance_and_inclination_bias(self, fD=1.1, inc_true=65.0):
         gal = synthetic_galaxy(rc_true=4.0)
