@@ -166,7 +166,7 @@ Sans nuisance, les mêmes tests donnent TCE V2 à égalité avec `mond_rs` (73/1
 ### Lecture prudente
 
 - **Une partie de l'avantage de rc libre est générique** : MOND avec n'importe quel second paramètre passe de χ²/dof 7,0 à 5,3-5,8 une fois D et i marginalisés. Seul un contrôle à nombre de paramètres égal permet de le voir.
-- **TCE V2 reste devant, de peu.** Δχ² = 2 048 sur `mond_rs`, mais seulement 0,8 de médiane par galaxie ; l'effet est statistiquement significatif (p = 0,008) sans nuisance non modélisée supplémentaire, et il disparaît (p = 0,55) quand D et i ne sont pas marginalisés. Il est donc fragile devant les systématiques de modélisation.
+- **TCE V2 reste devant, de peu.** Δχ² = 2 048 sur `mond_rs`, mais seulement 0,8 de médiane par galaxie ; l'effet est statistiquement significatif (p = 0,008) quand D et i sont marginalisés, mais il disparaît (p = 0,55) quand ils ne le sont pas. Il est donc fragile devant les systématiques de modélisation.
 - **D'où vient la différence de forme ?** V2 écrit g = g_bar + w·√(g_bar·a₀), qui revient vers Newton comme √(a₀/g_bar), plus lentement que l'interpolation « simple » de MOND (a₀/g_bar). Les données semblent légèrement préférer ce retour lent, mais `mond_n` (indice libre) ne le reproduit pas, ce qui mérite une étude séparée.
 - **V1 est moins bon que `mond_rs`** (39/138 galaxies) : l'avantage de V2 ne vient pas de la structure en « portail », mais de la forme précise de la transition.
 - **V2 a été écrit après avoir vu le défaut de la forme (5)** ; choisir la forme parmi plusieurs candidats puis la comparer sur les mêmes données gonfle l'avantage apparent. Il faudrait la tester sur des données indépendantes (autre échantillon que SPARC).
