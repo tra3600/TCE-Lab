@@ -234,3 +234,45 @@ Sept galaxies ont un modèle de masse (F563-1, F568-3, F571-8, F579-V1, F583-4, 
 - BIG-SPARC (~4000 galaxies, [arXiv:2411.13329](https://arxiv.org/abs/2411.13329)) : en cours de construction d'après la source ; à vérifier.
 
 Pour une validation hors échantillon, les formes V1/V2 sont donc pour l'instant testables seulement sur des échantillons à venir.
+
+## 9. Swaters et al. (2009) et test de remplacement sur de Blok & Bosma (2002)
+
+### 9.1 Swaters et al. (2009, WHISP, 62 naines) : données introuvables en tables
+
+| Source essayée | Résultat |
+|---|---|
+| CDS / VizieR J/A+A/493/871 | Catalogue absent (requêtes directe, ASU et recherche TAP par auteur ou mots-clés) |
+| TAP VizieR (tables dont la description cite Swaters, WHISP, courbes de rotation, modèles de masse) | Aucune table des courbes de [Swaters et al. 2009](https://arxiv.org/abs/0901.4222). Seules des tables d'autres articles (photométrie de Swaters & Balcells 2002, courbes optiques de quelques galaxies, etc.) |
+| Source TeX de l'article | Courbes en figures EPS ; remerciements pour « Verheijen & de Blok » seulement |
+| Site du projet WHISP (Groningen) | Page de présentation sans lien vers les courbes |
+
+La recherche TAP sur les noms de colonnes (Vgas, Vstar, Vdisk, Vbar...) n'a trouvé **aucune table VizieR avec des composantes baryoniques radiales** en dehors de celles déjà dans SPARC. Le test sur Swaters 2009 reste donc bloqué faute de tables ; si vous les avez (ou si elles sont fournies par les auteurs), elles se chargent avec `sparc.load_rotmod_directory` et `examples/fit_external.py`.
+
+### 9.2 Échantillon de remplacement : de Blok & Bosma (2002), [CDS J/A+A/385/816](https://cdsarc.cds.unistra.fr/ftp/J/A+A/385/816/ReadMe)
+
+24 naines et LSB avec courbes « traitées » (Vgas avec M_gas = 1,4 M_HI, Vdisk à M/L = 1 en bande R, Vrot avec erreurs incluant mesure, inclinaison et asymétrie).
+Dix galaxies sont déjà dans SPARC (F563-1, DDO 64, NGC 100, NGC 2366, UGC 10310, 1230, 1281, 4325, 5005, 5750) et sont exclues ;
+parmi les 14 restantes, **10 ont au moins 8 points** : DDO 189, DDO 47, IC 2233, NGC 1560, NGC 3274, NGC 4395, NGC 4455, NGC 5023, UGC 3371, UGC 4173.
+Le rapport M/L est en bande R : prior log-normale centrée sur 1,0 (σ = 0,2 dex) ; distances et inclinaisons non fournies, donc pas de marginalisation.
+Ces formes (V1, V2) n'ont pas servi à construire cet échantillon.
+
+| Modèle (M/L(R) = 1,0) | Param. libres / galaxie | χ² total | χ²/dof | BIC | rms (dex) |
+|---|---|---|---|---|---|
+| Newton | Υ | 22 489 | 95,7 | 22 544 | 0,850 |
+| MOND (a₀ fixé) | Υ | 2 140 | 9,1 | 2 195 | 0,339 |
+| MOND, a₀ libre | Υ, a₀ | **1 014** | **4,5** | **1 124** | **0,257** |
+| MOND, rayon de transition libre (`mond_rs`) | Υ, rs | 2 024 | 9,0 | 2 134 | 0,323 |
+| MOND, indice libre (`mond_n`) | Υ, n | 1 166 | 5,2 | 1 276 | 0,283 |
+| TCE du manuscrit | Υ, rc | 2 280 | 10,1 | 2 390 | 0,332 |
+| TCE V1 | Υ, rc | 2 195 | 9,8 | 2 305 | 0,328 |
+| TCE V2 | Υ, rc | 1 933 | 8,6 | 2 043 | 0,319 |
+
+Test de signe par galaxie : V2 meilleur que `mond_rs` sur 6/10 (p = 0,75), moins bon que `mond_a0` (2/10, p = 0,11) et que `mond_n` (3/10, p = 0,34). Les mêmes conclusions tiennent pour M/L(R) = 0,5 et 2,0 (χ² total de V2 : 2 124 et 1 835 ; de `mond_a0` : 1 054 et 1 024).
+
+### 9.3 Lecture prudente
+
+- **L'avantage de V2 observé sur SPARC (section 7) ne se reproduit pas** : V2 est au niveau de `mond_rs` (même structure, même nombre de paramètres) et loin derrière `mond_a0`. Sur SPARC sans marginalisation de D et i, V2 était déjà à égalité avec `mond_rs` (73/138 galaxies) ; son avantage n'apparaissait qu'avec la marginalisation, impossible ici.
+- **Le contrôle MOND à a₀ libre est le meilleur modèle** sur cet échantillon de naines et LSB, avec un χ² deux fois plus bas que V2.
+- **Échantillon petit** : 10 galaxies, dont NGC 5023 qui concentre 59 % du χ² de V2 (1 140 sur 1 933) ; les tests de signe n'ont pas de puissance pour détecter un effet de 0,5 en médiane.
+- **Pas de test de la forme V2 contre la forme du manuscrit** à ces données seules : l'écart V2 (1 933) contre manuscrit (2 280) va dans le sens de la correction, mais sans signification statistique.
+- Le résultat ne valide donc pas la forme V2 ; il est compatible avec un effet nul ou faible, masqué par la flexibilité d'un second paramètre quelconque.
