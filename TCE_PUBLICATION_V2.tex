@@ -1,0 +1,66 @@
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,graphicx,hyperref,geometry,authblk}
+\geometry{margin=2.5cm}
+\title{Controlling Emergent Time: Biological Aging and Artificial Gravitational Time Dilation in the Chrono-Energetic Framework $dT = dE / E_L$}
+\author{Gregory Lombardo}
+\affil{TCE-lab, Independent Researcher, Antibes, France}
+\date{October 2026 — Draft for arXiv / HAL / Zenodo — CC-BY 4.0}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We extend the Chrono-Energetic Theory (TCE) where physical time $T$ is not a primitive parameter but an emergent quantity $T(E) = \int dE / E_L$, with $E_L$ the lapse energy constant. From $dE = T_{thermo} dS$ we derive $dt = T_{thermo} dS / E_L$. This links entropy production to time flow.
+
+We explore: (1) Biology: high entropy production generates more local emergent time. Cellular senescence is reinterpreted as acceleration of local clock. Prediction: caloric restriction, hibernation, cryobiosis slow $dt$. (2) Astronautics: $E_{avail}=E_{tot}-E_{locked}$ and $\Gamma_{TCE}=E_{avail}(r)/E_{avail}(\infty)$. A controlled negative energy bubble (scalar confinement) can reduce $E_{avail}$ without relativistic velocity, producing artificial time dilation for interstellar travel.
+
+Three falsifiable experiments are proposed with atomic clocks near high/low entropy reactors and cell cultures.
+\end{abstract}
+
+\noindent\textbf{Keywords:} emergent time, chrono-energetics, aging, entropy, artificial time dilation, $E_L$
+
+\section{Introduction}
+Standard physics takes $t$ as external. TCE inverts the axiom: energy is first, time is derived. Implemented in TCE-lab integrators.py, we integrate over $dE$, not $dt$. If time emerges, it is controllable.
+
+\section{Formalism}
+\begin{align}
+T(E) &= \sum dE_i / E_L \quad \text{[emergent\_time.py]}\\
+dt &= T_{thermo} dS / E_L \quad \text{[thermo.py]}\\
+E_{avail} &= mc^2 + E_{int} + E_{kin} + E_p - E_{locked}\\
+\Gamma_{TCE} &= E_{avail}(near)/E_{avail}(far) \quad \text{[gravitation.py]}
+\end{align}
+Lagrangian densities: $ \mathcal{L}=0.5 \dot\phi^2 -0.5 |\nabla\phi|^2$ and $\mathcal{L}= \psi^\dagger i\partial_t \psi - \psi^\dagger H \psi$, $L_{energy}=\int \mathcal{L}_{density} dV$
+
+\section{Biological Implications}
+Hypothesis H1: $dt_{cell} \propto dS_{cell}$
+
+High entropy cell produces more emergent time. Aging law:
+$$ \frac{dT_{bio}}{dT_{lab}} = \frac{\langle dS_{bio}\rangle}{\langle dS_{ref}\rangle} $$
+
+Caloric restriction -30\% $dS$ predicts -30\% clock slowdown. Cancer cell as time-accelerated system.
+
+\section{Astronautical Implications}
+Hypothesis H2: Artificial depletion of $E_{avail}$.
+
+Chrono-Depletive Bubble (CDB): scalar field $\phi$ confined stores $E_{locked}$, reduces $E_{avail}$.
+
+$$ \Gamma_{TCE} \sim 0.01 \text{ achievable with } E_{locked} \sim 0.99 E_{tot} $$
+
+No past travel: $dS \ge 0 \implies dt \ge 0$. Only controlled slowdown.
+
+\section{Falsifiable Predictions}
+P1: Sr lattice clocks near high vs low entropy reactor, predicted $\Delta\Gamma \sim 10^{-19}-10^{-18}$ for $\Delta S \sim 1kW$.
+
+P2: Dormant vs active cell culture clock comparison, ns/day difference.
+
+P3: TCE-lab scalar ND confinement simulation, $L_{energy}$ drop correlates with $\Gamma_{TCE}$.
+
+\section{Discussion}
+$E_L$ remains free parameter, to be measured. Estimated $E_L \sim k_B T_{Planck}$ or much lower if mesoscopic emergent. Second law preserved.
+
+\section{Conclusion}
+If $dT=dE/E_L$ holds, time control is thermodynamics, not propulsion. Youth and interstellar travel share same engineering: control local entropy production.
+
+\end{document}
