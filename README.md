@@ -1,4 +1,4 @@
-![TCE-lab Cover](./assets/cover_github.png)
+![TCE-lab Cover](./cover_github.png)
 # TCE-Lab
  
 Chrono-Energetic Theory Numerical Laboratory
