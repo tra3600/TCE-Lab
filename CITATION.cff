@@ -2,14 +2,10 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "TCE-Lab: Chrono-Energetic Theory Numerical Laboratory"
-version: 2.0.1
-date-released: 2026-10-17
 authors:
     - family-names: Lombardo
     given-names: Gregory
-    affiliation: "TCE-lab, Antibes, France"
-identifiers:
-    - type: doi
-    value: 10.5281/zenodo.23377427
-repository-code: "https://github.com/tra3600/TCE-Lab"
+doi: 10.5281/zenodo.23377427
+url: "https://github.com/tra3600/TCE-Lab"
+date-released: 2026-10-17
 license: CC-BY-4.0
