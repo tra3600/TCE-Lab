@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use TCE-lab, please cite it as below."
+type: software
+title: "TCE-lab: Chrono-Energetic Theory Numerical Laboratory - V2 Controlling Emergent Time"
+abstract: "Time is not a dimension but an emergent quantity T(E) = ∫ dE / E_L. V2 adds thermo-chronology dt = T_thermo dS / E_L for biological aging and artificial time dilation Γ_TCE = E_avail(r)/E_avail(∞) for interstellar travel without relativistic velocity. Includes Python numerical lab, 3 falsifiable predictions with Sr clocks."
+authors:
+  - family-names: Lombardo
+    given-names: Gregory
+    affiliation: "TCE-lab, Independent Researcher, Antibes, France"
+version: "2.0-bio-space"
+date-released: "2026-10-17"
+license: "CC-BY-4.0"
+repository-code: "https://github.com/tra3600/TCE-Lab"
+doi: "10.5281/zenodo.23377427"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23377427
+    description: "Zenodo DOI for V2"
+  - type: url
+    value: "https://github.com/tra3600/TCE-Lab"
+keywords:
+  - emergent-time
+  - chrono-energetics
+  - time-dilation
+  - dT=dE/E_L
+  - biophysics
+  - interstellar-travel
