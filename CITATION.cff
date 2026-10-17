@@ -3,9 +3,8 @@ message: "If you use this software, please cite it as below."
 type: software
 title: "TCE-Lab: Chrono-Energetic Theory Numerical Laboratory"
 authors:
-    - family-names: Lombardo
+  - family-names: Lombardo
     given-names: Gregory
 doi: 10.5281/zenodo.23377427
-url: "https://github.com/tra3600/TCE-Lab"
-date-released: 2026-10-17
+url: https://github.com/tra3600/TCE-Lab
 license: CC-BY-4.0
